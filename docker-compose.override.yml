@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=eduportal_dev;Username=postgres;Password=postgres
+      - JwtSettings__Secret=dev-secret-key-change-in-production-minimum-32-characters
+      - Redis__ConnectionString=redis:6379
+    ports:
+      - "5000:8080"
+      - "5001:8081"

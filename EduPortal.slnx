@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="EduPortal.API/EduPortal.API.csproj" />
+  <Project Path="EduPortal.Application/EduPortal.Application.csproj" />
+  <Project Path="EduPortal.Domain/EduPortal.Domain.csproj" />
+  <Project Path="EduPortal.Infrastructure/EduPortal.Infrastructure.csproj" />
+  <Project Path="EduPortal.Tests/EduPortal.Tests.csproj" />
+</Solution>

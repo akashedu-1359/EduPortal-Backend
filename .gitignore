@@ -1,0 +1,29 @@
+# Claude Code
+.claude/
+
+# Build output
+bin/
+obj/
+*.user
+
+# Secrets / environment
+appsettings.Production.json
+appsettings.Staging.json
+.env
+.env.*
+!.env.example
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.sln.docstates
+.idea/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
