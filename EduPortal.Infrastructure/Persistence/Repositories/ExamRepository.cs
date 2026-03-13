@@ -19,7 +19,7 @@ public class ExamRepository : IExamRepository
 
     public async Task<(List<Exam> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
     {
-        var query = _db.Exams.Where(e => !e.IsDeleted);
+        var query = _db.Exams.Where(e => !e.IsDeleted).Include(e => e.Questions);
         var total = await query.CountAsync(ct);
         var items = await query.OrderByDescending(e => e.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         return (items, total);
@@ -36,6 +36,18 @@ public class ExamRepository : IExamRepository
 
     public async Task AddAttemptAsync(ExamAttempt attempt, CancellationToken ct) =>
         await _db.ExamAttempts.AddAsync(attempt, ct);
+
+    public async Task AddCertificateAsync(Certificate cert, CancellationToken ct) =>
+        await _db.Certificates.AddAsync(cert, ct);
+
+    public Task<Certificate?> GetCertificateAsync(Guid id, CancellationToken ct) =>
+        _db.Certificates.FirstOrDefaultAsync(c => c.Id == id, ct);
+
+    public Task<List<Certificate>> GetCertificatesByUserIdAsync(Guid userId, CancellationToken ct) =>
+        _db.Certificates.Where(c => c.UserId == userId).OrderByDescending(c => c.IssuedAt).ToListAsync(ct);
+
+    public Task<List<ExamAttempt>> GetAttemptsByUserIdAsync(Guid userId, CancellationToken ct) =>
+        _db.ExamAttempts.Where(a => a.UserId == userId).ToListAsync(ct);
 
     public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 }

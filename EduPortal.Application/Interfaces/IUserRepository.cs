@@ -11,5 +11,6 @@ public interface IUserRepository
     Task<List<string>> GetPermissionsAsync(Guid userId, CancellationToken ct = default);
     Task<string?> GetRoleNameAsync(Guid userId, CancellationToken ct = default);
     Task AssignRoleAsync(Guid userId, int roleId, CancellationToken ct = default);
+    Task<(List<User> Items, int Total)> GetPagedAsync(int page, int pageSize, string? search, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

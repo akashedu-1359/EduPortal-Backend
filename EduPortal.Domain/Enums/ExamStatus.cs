@@ -7,5 +7,6 @@ public enum ExamStatus
     Scheduled,
     Active,
     Closed,
-    Archived
+    Archived,
+    Completed
 }

@@ -77,6 +77,22 @@ public static class DependencyInjection
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
         services.AddScoped<ICmsRepository, CmsRepository>();
+        services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+
+        // Google Auth
+        services.AddHttpClient();
+        services.AddScoped<GoogleAuthService>();
+
+        // ISR Revalidation
+        services.AddHttpClient<NextJsRevalidationService>();
+        services.AddScoped<IRevalidationService, NextJsRevalidationService>();
+
+        // Payment Gateways
+        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddScoped<IPaymentGateway, RazorpayPaymentGateway>();
+
+        // Background Services
+        services.AddHostedService<ExamStatusSchedulerService>();
 
         return services;
     }

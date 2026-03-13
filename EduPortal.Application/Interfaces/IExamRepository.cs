@@ -11,4 +11,10 @@ public interface IExamRepository
     Task AddAsync(Exam exam, CancellationToken ct = default);
     Task AddAttemptAsync(ExamAttempt attempt, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    // Certificate methods
+    Task AddCertificateAsync(Certificate cert, CancellationToken ct = default);
+    Task<Certificate?> GetCertificateAsync(Guid id, CancellationToken ct = default);
+    Task<List<Certificate>> GetCertificatesByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task<List<ExamAttempt>> GetAttemptsByUserIdAsync(Guid userId, CancellationToken ct = default);
 }

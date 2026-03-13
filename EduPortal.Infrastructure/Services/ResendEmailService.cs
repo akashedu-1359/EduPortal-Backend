@@ -56,6 +56,25 @@ public class ResendEmailService : IEmailService
         }
     }
 
+    public async Task SendCertificateEmailAsync(string toEmail, string fullName, string certificateUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            var message = new EmailMessage
+            {
+                From = _fromEmail,
+                Subject = "Your EduPortal Certificate is Ready!",
+                HtmlBody = $"<h1>Congratulations, {fullName}!</h1><p>Your certificate is ready. <a href='{certificateUrl}'>Download your certificate</a>.</p>"
+            };
+            message.To.Add(toEmail);
+            await _resend.EmailSendAsync(message, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send certificate email to {Email}", toEmail);
+        }
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetLink, CancellationToken ct = default)
     {
         try
