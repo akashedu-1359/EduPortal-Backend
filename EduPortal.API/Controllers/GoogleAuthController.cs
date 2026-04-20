@@ -36,11 +36,12 @@ public class GoogleAuthController : ControllerBase
 
         var (accessToken, refreshToken, _) = result.Value;
 
+        // Lax required — the redirect FROM accounts.google.com is cross-site
         Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.Lax,
             Expires = DateTimeOffset.UtcNow.AddDays(30)
         });
 

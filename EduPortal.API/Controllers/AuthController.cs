@@ -14,12 +14,34 @@ public class AuthController : ControllerBase
     public AuthController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("register")]
+    [EnableRateLimiting("login")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.IsSuccess
-            ? StatusCode(201, new { success = true, data = result.Value })
-            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
+        if (!result.IsSuccess)
+            return StatusCode(result.StatusCode, new { success = false, error = result.Error });
+
+        var cookieExpiry = DateTimeOffset.UtcNow.AddDays(30);
+
+        Response.Cookies.Append("refresh_token", result.Value!.RefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = cookieExpiry
+        });
+
+        Response.Cookies.Append("eduportal_role", result.Value.User.Role, new CookieOptions
+        {
+            HttpOnly = false,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = cookieExpiry
+        });
+
+        // refreshToken is included so the Next.js route handler can set it as an httpOnly cookie.
+        // The route handler strips it before forwarding the response to the browser.
+        return StatusCode(201, new { success = true, data = new { result.Value.AccessToken, result.Value.User, result.Value.RefreshToken } });
     }
 
     [HttpPost("login")]
