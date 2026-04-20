@@ -30,13 +30,23 @@ public class AuthController : ControllerBase
         if (!result.IsSuccess)
             return StatusCode(result.StatusCode, new { success = false, error = result.Error });
 
-        // Set refresh token in httpOnly cookie
+        var cookieExpiry = DateTimeOffset.UtcNow.AddDays(30);
+
         Response.Cookies.Append("refresh_token", result.Value!.RefreshToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
+            Expires = cookieExpiry
+        });
+
+        // Non-httpOnly so Next.js middleware can use it for role-based routing
+        Response.Cookies.Append("eduportal_role", result.Value.User.Role, new CookieOptions
+        {
+            HttpOnly = false,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = cookieExpiry
         });
 
         return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User } });
@@ -73,6 +83,7 @@ public class AuthController : ControllerBase
         var refreshToken = Request.Cookies["refresh_token"] ?? "";
         await _mediator.Send(new LogoutCommand(refreshToken), ct);
         Response.Cookies.Delete("refresh_token");
+        Response.Cookies.Delete("eduportal_role");
         return Ok(new { success = true });
     }
 }
