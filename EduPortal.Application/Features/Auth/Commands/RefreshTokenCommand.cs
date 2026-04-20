@@ -6,7 +6,7 @@ using MediatR;
 namespace EduPortal.Application.Features.Auth.Commands;
 
 public record RefreshTokenCommand(string RefreshToken) : IRequest<Result<TokenRefreshResponse>>;
-public record TokenRefreshResponse(string AccessToken, string RefreshToken);
+public record TokenRefreshResponse(string AccessToken, string RefreshToken, UserDto User);
 
 public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, Result<TokenRefreshResponse>>
 {
@@ -57,6 +57,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         await _refreshTokens.SaveChangesAsync(cancellationToken);
 
         var newAccessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, role, permissions);
-        return Result<TokenRefreshResponse>.Success(new TokenRefreshResponse(newAccessToken, newRawToken));
+        return Result<TokenRefreshResponse>.Success(new TokenRefreshResponse(newAccessToken, newRawToken, new UserDto(user.Id, user.Email, user.FullName, role)));
     }
 }

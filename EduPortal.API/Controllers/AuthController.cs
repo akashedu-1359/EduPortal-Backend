@@ -66,15 +66,25 @@ public class AuthController : ControllerBase
             return Unauthorized(new { success = false, error = result.Error });
         }
 
+        var refreshExpiry = DateTimeOffset.UtcNow.AddDays(30);
+
         Response.Cookies.Append("refresh_token", result.Value!.RefreshToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
+            Expires = refreshExpiry
         });
 
-        return Ok(new { success = true, data = new { result.Value.AccessToken } });
+        Response.Cookies.Append("eduportal_role", result.Value.User.Role, new CookieOptions
+        {
+            HttpOnly = false,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = refreshExpiry
+        });
+
+        return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User } });
     }
 
     [HttpPost("logout")]
