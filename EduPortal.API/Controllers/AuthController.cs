@@ -49,7 +49,9 @@ public class AuthController : ControllerBase
             Expires = cookieExpiry
         });
 
-        return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User } });
+        // refreshToken is included so the Next.js route handler can set it as an httpOnly cookie.
+        // The route handler strips it before forwarding the response to the browser.
+        return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User, result.Value.RefreshToken } });
     }
 
     [HttpPost("refresh")]
@@ -84,7 +86,7 @@ public class AuthController : ControllerBase
             Expires = refreshExpiry
         });
 
-        return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User } });
+        return Ok(new { success = true, data = new { result.Value.AccessToken, result.Value.User, result.Value.RefreshToken } });
     }
 
     [HttpPost("logout")]
