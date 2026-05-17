@@ -30,10 +30,10 @@ public class UpdateResourceCommandHandler : IRequestHandler<UpdateResourceComman
 
         resource.Title = request.Title;
         resource.Description = request.Description;
-        resource.FileKey = request.FileKey;
-        resource.ExternalUrl = request.ExternalUrl;
-        resource.BlogContent = request.BlogContent;
-        resource.ThumbnailKey = request.ThumbnailKey;
+        if (request.FileKey != null) resource.FileKey = request.FileKey;
+        if (request.ExternalUrl != null) resource.ExternalUrl = request.ExternalUrl;
+        if (request.BlogContent != null) resource.BlogContent = request.BlogContent;
+        if (request.ThumbnailKey != null) resource.ThumbnailKey = request.ThumbnailKey;
         resource.Price = request.Price;
         resource.IsFeatured = request.IsFeatured;
         resource.CategoryId = request.CategoryId;

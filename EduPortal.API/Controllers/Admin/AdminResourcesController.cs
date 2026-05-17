@@ -23,20 +23,30 @@ public class AdminResourcesController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetAdminResourceByIdQuery(id), ct);
+        return result.IsSuccess ? Ok(new { success = true, data = result.Value })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateResourceRequest req, CancellationToken ct)
     {
         var price = req.PricingType == "Free" ? 0m : (req.Price ?? 0m);
-        var command = new CreateResourceCommand(req.Title, req.Description, req.Type, null, null, null, null, price, req.CategoryId);
+        var command = new CreateResourceCommand(req.Title, req.Description, req.Type, req.FileKey, null, req.BlogContent, req.ThumbnailKey, price, req.CategoryId);
         var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? StatusCode(201, new { success = true, data = result.Value })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateResourceRequest req, CancellationToken ct)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateResourceApiRequest req, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateResourceCommand(id, req.Title, req.Description, req.FileKey, req.ExternalUrl, req.BlogContent, req.ThumbnailKey, req.Price, req.IsFeatured, req.CategoryId), ct);
+        var price = req.PricingType == "Free" ? 0m : (req.Price ?? 0m);
+        var command = new UpdateResourceCommand(id, req.Title, req.Description, req.FileKey, req.ExternalUrl, req.BlogContent, req.ThumbnailKey, price, req.IsFeatured ?? false, req.CategoryId);
+        var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? Ok(new { success = true, data = result.Value })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
@@ -68,7 +78,11 @@ public class AdminResourcesController : ControllerBase
 
 public record CreateResourceRequest(
     string Title, string Description, ResourceType Type, Guid CategoryId,
-    string PricingType, decimal? Price, string? Currency, string[]? Tags, int? DurationMinutes);
+    string PricingType, decimal? Price, string? Currency, string[]? Tags, int? DurationMinutes,
+    string? FileKey, string? ThumbnailKey, string? BlogContent);
 
-public record UpdateResourceRequest(string Title, string Description, string? FileKey, string? ExternalUrl,
-    string? BlogContent, string? ThumbnailKey, decimal Price, bool IsFeatured, Guid CategoryId);
+public record UpdateResourceApiRequest(
+    string Title, string Description, ResourceType Type, Guid CategoryId,
+    string PricingType, decimal? Price, string? Currency, string[]? Tags, int? DurationMinutes,
+    string? FileKey, string? ExternalUrl, string? BlogContent, string? ThumbnailKey,
+    bool? IsFeatured, string? Status);
