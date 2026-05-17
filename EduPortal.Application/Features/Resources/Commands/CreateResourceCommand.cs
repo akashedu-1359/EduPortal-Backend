@@ -12,10 +12,17 @@ public record CreateResourceCommand(
     string? FileKey, string? ExternalUrl, string? BlogContent,
     string? ThumbnailKey, decimal Price, Guid CategoryId) : IRequest<Result<ResourceDto>>;
 
-public record ResourceDto(Guid Id, string Title, string Description, ResourceType ResourceType,
-    string? FileKey, string? ExternalUrl, string? BlogContent, string? ThumbnailKey,
-    decimal Price, ResourceStatus Status, bool IsFeatured, Guid CategoryId, string? CategoryName,
-    string? ThumbnailUrl, DateTime CreatedAt);
+public record ResourceDto(
+    Guid Id, string Title, string Slug, string Description, string? ThumbnailUrl,
+    ResourceType Type, ResourceStatus Status, string PricingType, decimal Price, string? Currency,
+    Guid CategoryId, ResourceCategoryDto? Category,
+    string[] Tags, int? DurationMinutes,
+    Guid AuthorId, string AuthorName,
+    int ViewCount, int EnrollmentCount,
+    bool IsPublished, DateTime? PublishedAt,
+    DateTime CreatedAt, DateTime UpdatedAt);
+
+public record ResourceCategoryDto(Guid Id, string Name, string Slug, string? Description, bool IsActive);
 
 public class CreateResourceCommandValidator : AbstractValidator<CreateResourceCommand>
 {
@@ -56,11 +63,37 @@ public class CreateResourceCommandHandler : IRequestHandler<CreateResourceComman
         };
         await _resources.AddAsync(resource, cancellationToken);
         await _resources.SaveChangesAsync(cancellationToken);
-        return Result<ResourceDto>.Created(ToDto(resource));
+        return Result<ResourceDto>.Created(ToDto(resource, category));
     }
 
-    public static ResourceDto ToDto(Resource r, string? thumbnailUrl = null) =>
-        new(r.Id, r.Title, r.Description, r.ResourceType, r.FileKey, r.ExternalUrl, r.BlogContent,
-            r.ThumbnailKey, r.Price, r.Status, r.IsFeatured, r.CategoryId,
-            r.Category?.Name, thumbnailUrl, r.CreatedAt);
+    public static ResourceDto ToDto(Resource r, Domain.Entities.Category? category = null, string? thumbnailUrl = null)
+    {
+        var cat = category ?? r.Category;
+        return new ResourceDto(
+            r.Id,
+            r.Title,
+            GenerateSlug(r.Title),
+            r.Description,
+            thumbnailUrl,
+            r.ResourceType,
+            r.Status,
+            r.Price > 0 ? "Paid" : "Free",
+            r.Price,
+            null,
+            r.CategoryId,
+            cat != null ? new ResourceCategoryDto(cat.Id, cat.Name, cat.Slug, cat.Description, cat.IsVisible) : null,
+            Array.Empty<string>(),
+            null,
+            r.CreatedByAdminId,
+            r.CreatedByAdmin?.FullName ?? string.Empty,
+            0,
+            r.Enrollments.Count,
+            r.Status == ResourceStatus.Published,
+            null,
+            r.CreatedAt,
+            r.UpdatedAt);
+    }
+
+    private static string GenerateSlug(string title) =>
+        System.Text.RegularExpressions.Regex.Replace(title.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
 }

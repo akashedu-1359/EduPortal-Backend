@@ -12,9 +12,40 @@ public class AnalyticsRepository : IAnalyticsRepository
 
     public Task<int> GetTotalUsersAsync(CancellationToken ct) => _db.Users.CountAsync(ct);
     public Task<int> GetTotalEnrollmentsAsync(CancellationToken ct) => _db.Enrollments.CountAsync(ct);
-    public Task<int> GetTotalResourcesAsync(CancellationToken ct) => _db.Resources.CountAsync(ct);
-    public Task<int> GetTotalExamAttemptsAsync(CancellationToken ct) => _db.ExamAttempts.CountAsync(ct);
+    public Task<int> GetTotalResourcesAsync(CancellationToken ct) => _db.Resources.CountAsync(r => !r.IsDeleted, ct);
+    public Task<int> GetPublishedResourcesAsync(CancellationToken ct) => _db.Resources.CountAsync(r => !r.IsDeleted && r.Status == ResourceStatus.Published, ct);
+    public Task<int> GetTotalExamsAsync(CancellationToken ct) => _db.Exams.CountAsync(ct);
+    public Task<int> GetTotalCertificatesAsync(CancellationToken ct) => _db.Certificates.CountAsync(ct);
+
     public Task<decimal> GetTotalRevenueAsync(CancellationToken ct) =>
         _db.Orders.Where(o => o.Status == OrderStatus.Completed).SumAsync(o => o.Amount, ct);
-    public Task<int> GetTotalOrdersAsync(CancellationToken ct) => _db.Orders.CountAsync(ct);
+
+    public Task<decimal> GetRevenueThisMonthAsync(CancellationToken ct)
+    {
+        var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        return _db.Orders.Where(o => o.Status == OrderStatus.Completed && o.CreatedAt >= start)
+            .SumAsync(o => o.Amount, ct);
+    }
+
+    public async Task<List<(DateOnly Date, decimal Amount)>> GetRevenueByDayAsync(int days, CancellationToken ct)
+    {
+        var from = DateTime.UtcNow.AddDays(-days).Date;
+        var rows = await _db.Orders
+            .Where(o => o.Status == OrderStatus.Completed && o.CreatedAt >= from)
+            .GroupBy(o => o.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Amount = g.Sum(o => o.Amount) })
+            .ToListAsync(ct);
+        return rows.Select(r => (DateOnly.FromDateTime(r.Date), r.Amount)).ToList();
+    }
+
+    public async Task<List<(DateOnly Date, int Count)>> GetEnrollmentsByDayAsync(int days, CancellationToken ct)
+    {
+        var from = DateTime.UtcNow.AddDays(-days).Date;
+        var rows = await _db.Enrollments
+            .Where(e => e.EnrolledAt >= from)
+            .GroupBy(e => e.EnrolledAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        return rows.Select(r => (DateOnly.FromDateTime(r.Date), r.Count)).ToList();
+    }
 }

@@ -5,7 +5,16 @@ using MediatR;
 namespace EduPortal.Application.Features.Analytics.Queries;
 
 public record GetAdminDashboardQuery : IRequest<Result<AdminDashboardDto>>;
-public record AdminDashboardDto(int TotalUsers, int TotalEnrollments, int TotalResources, int TotalExamAttempts, decimal TotalRevenue, int TotalOrders);
+
+public record AdminDashboardDto(
+    int TotalUsers, int ActiveUsers,
+    int TotalResources, int PublishedResources,
+    int TotalEnrollments,
+    decimal TotalRevenue, decimal RevenueThisMonth,
+    int TotalCertificates, int TotalExams,
+    List<ActivityItem> RecentActivity);
+
+public record ActivityItem(string Id, string Type, string Description, string UserId, string UserName, DateTime CreatedAt);
 
 public class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDashboardQuery, Result<AdminDashboardDto>>
 {
@@ -18,9 +27,15 @@ public class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDashboardQu
         var users = await _analytics.GetTotalUsersAsync(cancellationToken);
         var enrollments = await _analytics.GetTotalEnrollmentsAsync(cancellationToken);
         var resources = await _analytics.GetTotalResourcesAsync(cancellationToken);
-        var attempts = await _analytics.GetTotalExamAttemptsAsync(cancellationToken);
+        var published = await _analytics.GetPublishedResourcesAsync(cancellationToken);
+        var exams = await _analytics.GetTotalExamsAsync(cancellationToken);
+        var certs = await _analytics.GetTotalCertificatesAsync(cancellationToken);
         var revenue = await _analytics.GetTotalRevenueAsync(cancellationToken);
-        var orders = await _analytics.GetTotalOrdersAsync(cancellationToken);
-        return Result<AdminDashboardDto>.Success(new AdminDashboardDto(users, enrollments, resources, attempts, revenue, orders));
+        var revenueMonth = await _analytics.GetRevenueThisMonthAsync(cancellationToken);
+
+        return Result<AdminDashboardDto>.Success(new AdminDashboardDto(
+            users, users, resources, published,
+            enrollments, revenue, revenueMonth,
+            certs, exams, []));
     }
 }
