@@ -6,7 +6,6 @@ namespace EduPortal.Domain.Entities;
 public class Resource : BaseEntity
 {
     public string Title { get; set; } = default!;
-    public string Slug { get; set; } = string.Empty;
     public string Description { get; set; } = default!;
     public ResourceType ResourceType { get; set; }
     public string? FileKey { get; set; }
@@ -14,13 +13,8 @@ public class Resource : BaseEntity
     public string? BlogContent { get; set; }
     public string? ThumbnailKey { get; set; }
     public decimal Price { get; set; }
-    public string Currency { get; set; } = "INR";
-    public string[] Tags { get; set; } = Array.Empty<string>();
-    public int? DurationMinutes { get; set; }
-    public int ViewCount { get; set; }
     public ResourceStatus Status { get; set; } = ResourceStatus.Draft;
     public bool IsFeatured { get; set; }
-    public DateTime? PublishedAt { get; set; }
     public Guid CategoryId { get; set; }
     public Guid CreatedByAdminId { get; set; }
     public bool IsDeleted { get; set; }

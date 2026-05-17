@@ -35,7 +35,7 @@ public class AdminResourcesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateResourceRequest req, CancellationToken ct)
     {
         var price = req.PricingType == "Free" ? 0m : (req.Price ?? 0m);
-        var command = new CreateResourceCommand(req.Title, req.Description, req.Type, req.FileKey, null, req.BlogContent, req.ThumbnailKey, price, req.Currency ?? "INR", req.CategoryId, req.Tags, req.DurationMinutes);
+        var command = new CreateResourceCommand(req.Title, req.Description, req.Type, req.FileKey, null, req.BlogContent, req.ThumbnailKey, price, req.CategoryId);
         var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? StatusCode(201, new { success = true, data = result.Value })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
@@ -45,7 +45,7 @@ public class AdminResourcesController : ControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateResourceApiRequest req, CancellationToken ct)
     {
         var price = req.PricingType == "Free" ? 0m : (req.Price ?? 0m);
-        var command = new UpdateResourceCommand(id, req.Title, req.Description, req.FileKey, req.ExternalUrl, req.BlogContent, req.ThumbnailKey, price, req.Currency, req.IsFeatured ?? false, req.CategoryId, req.Tags, req.DurationMinutes);
+        var command = new UpdateResourceCommand(id, req.Title, req.Description, req.FileKey, req.ExternalUrl, req.BlogContent, req.ThumbnailKey, price, req.IsFeatured ?? false, req.CategoryId);
         var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? Ok(new { success = true, data = result.Value })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });

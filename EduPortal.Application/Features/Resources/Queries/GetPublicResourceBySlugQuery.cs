@@ -44,25 +44,27 @@ public class GetPublicResourceBySlugQueryHandler : IRequestHandler<GetPublicReso
         if ((isFree || isEnrolled) && !string.IsNullOrEmpty(resource.FileKey))
             contentUrl = await _storage.GetReadUrlAsync(resource.FileKey, 3600, cancellationToken);
 
-        var (related, _) = await _resources.GetPagedAsync(1, 4, Domain.Enums.ResourceStatus.Published, resource.CategoryId, cancellationToken);
+        var (related, _) = await _resources.GetPagedAsync(1, 5, Domain.Enums.ResourceStatus.Published, resource.CategoryId, cancellationToken);
         var relatedDtos = related
             .Where(r => r.Id != resource.Id)
             .Take(4)
             .Select(r => CreateResourceCommandHandler.ToDto(r, r.Category))
             .ToList();
 
+        var slug = CreateResourceCommandHandler.GenerateSlug(resource.Title);
+        var cat = resource.Category != null
+            ? new ResourceCategoryDto(resource.Category.Id, resource.Category.Name, resource.Category.Slug, resource.Category.Description, resource.Category.IsVisible)
+            : null;
+
         var dto = new ResourceDetailDto(
-            resource.Id, resource.Title,
-            string.IsNullOrEmpty(resource.Slug) ? CreateResourceCommandHandler.GenerateSlug(resource.Title) : resource.Slug,
-            resource.Description, thumbnailUrl,
+            resource.Id, resource.Title, slug, resource.Description, thumbnailUrl,
             resource.ResourceType, resource.Status,
-            isFree ? "Free" : "Paid", resource.Price, resource.Currency,
-            resource.CategoryId,
-            resource.Category != null ? new ResourceCategoryDto(resource.Category.Id, resource.Category.Name, resource.Category.Slug, resource.Category.Description, resource.Category.IsVisible) : null,
-            resource.Tags, resource.DurationMinutes,
+            isFree ? "Free" : "Paid", resource.Price, "INR",
+            resource.CategoryId, cat,
+            Array.Empty<string>(), null,
             resource.CreatedByAdminId, resource.CreatedByAdmin?.FullName ?? string.Empty,
-            resource.ViewCount, resource.Enrollments?.Count ?? 0,
-            resource.Status == Domain.Enums.ResourceStatus.Published, resource.PublishedAt,
+            0, resource.Enrollments?.Count ?? 0,
+            resource.Status == Domain.Enums.ResourceStatus.Published, null,
             resource.CreatedAt, resource.UpdatedAt,
             contentUrl, isEnrolled, isEnrolled,
             relatedDtos);

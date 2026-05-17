@@ -22,7 +22,6 @@ public class PublishResourceCommandHandler : IRequestHandler<PublishResourceComm
         if (!hasContent) return Result.Failure("Resource must have content (FileKey, ExternalUrl, or BlogContent) before publishing.", 422);
 
         resource.Status = ResourceStatus.Published;
-        resource.PublishedAt ??= DateTime.UtcNow;
         await _resources.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
