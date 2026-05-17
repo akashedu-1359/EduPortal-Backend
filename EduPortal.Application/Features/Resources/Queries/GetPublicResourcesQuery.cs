@@ -6,7 +6,7 @@ using MediatR;
 
 namespace EduPortal.Application.Features.Resources.Queries;
 
-public record GetPublicResourcesQuery(int Page = 1, int PageSize = 20, ResourceType? Type = null, Guid? CategoryId = null, bool? Featured = null, string? Search = null) : IRequest<Result<PagedResult<PublicResourceDto>>>;
+public record GetPublicResourcesQuery(int PageNumber = 1, int PageSize = 20, ResourceType? Type = null, Guid? CategoryId = null, bool? Featured = null, string? Search = null) : IRequest<Result<PagedResult<PublicResourceDto>>>;
 
 public record PublicResourceDto(Guid Id, string Title, string Description, ResourceType ResourceType, decimal Price, bool IsFeatured, Guid CategoryId, string? CategoryName, string? ThumbnailUrl);
 
@@ -21,7 +21,7 @@ public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResources
 
     public async Task<Result<PagedResult<PublicResourceDto>>> Handle(GetPublicResourcesQuery request, CancellationToken cancellationToken)
     {
-        var (items, total) = await _resources.GetPagedAsync(request.Page, request.PageSize, ResourceStatus.Published, request.CategoryId, cancellationToken);
+        var (items, total) = await _resources.GetPagedAsync(request.PageNumber, request.PageSize, ResourceStatus.Published, request.CategoryId, cancellationToken);
 
         if (request.Type.HasValue) items = items.Where(r => r.ResourceType == request.Type.Value).ToList();
         if (request.Featured == true) items = items.Where(r => r.IsFeatured).ToList();
@@ -40,6 +40,6 @@ public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResources
             dtos.Add(new PublicResourceDto(r.Id, r.Title, r.Description, r.ResourceType, r.Price, r.IsFeatured, r.CategoryId, r.Category?.Name, thumbnailUrl));
         }
 
-        return Result<PagedResult<PublicResourceDto>>.Success(PagedResult<PublicResourceDto>.Create(dtos, request.Page, request.PageSize, total));
+        return Result<PagedResult<PublicResourceDto>>.Success(PagedResult<PublicResourceDto>.Create(dtos, request.PageNumber, request.PageSize, total));
     }
 }

@@ -16,10 +16,10 @@ public class AdminResourcesController : ControllerBase
     public AdminResourcesController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20,
         [FromQuery] ResourceStatus? status = null, [FromQuery] Guid? categoryId = null, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAdminResourcesQuery(page, pageSize, status, categoryId), ct);
+        var result = await _mediator.Send(new GetAdminResourcesQuery(pageNumber, pageSize, status, categoryId), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -47,7 +47,7 @@ public class AdminResourcesController : ControllerBase
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
-    [HttpPatch("{id:guid}/publish")]
+    [HttpPost("{id:guid}/publish")]
     public async Task<IActionResult> Publish(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new PublishResourceCommand(id), ct);
@@ -55,10 +55,10 @@ public class AdminResourcesController : ControllerBase
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
-    [HttpPatch("{id:guid}/unpublish")]
-    public async Task<IActionResult> Unpublish(Guid id, CancellationToken ct)
+    [HttpPost("{id:guid}/archive")]
+    public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UnpublishResourceCommand(id), ct);
+        var result = await _mediator.Send(new ArchiveResourceCommand(id), ct);
         return result.IsSuccess ? Ok(new { success = true })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }

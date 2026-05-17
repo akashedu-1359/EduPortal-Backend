@@ -4,5 +4,5 @@ public enum ResourceStatus
 {
     Draft,
     Published,
-    Unpublished
+    Archived
 }

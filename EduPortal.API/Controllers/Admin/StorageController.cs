@@ -1,19 +1,25 @@
 using EduPortal.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace EduPortal.API.Controllers.Admin;
 
 [ApiController]
-[Route("api/admin/storage")]
+[Route("api/storage")]
 [Authorize(Policy = "ContentWrite")]
 public class StorageController : ControllerBase
 {
     private readonly IStorageService _storage;
+    private readonly string _publicUrl;
 
-    public StorageController(IStorageService storage) => _storage = storage;
+    public StorageController(IStorageService storage, IConfiguration config)
+    {
+        _storage = storage;
+        _publicUrl = config["Storage:PublicUrl"] ?? string.Empty;
+    }
 
-    [HttpPost("upload-url")]
+    [HttpPost("presigned-upload")]
     public async Task<IActionResult> GetUploadUrl([FromBody] GetUploadUrlRequest request, CancellationToken ct)
     {
         var allowedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -29,11 +35,12 @@ public class StorageController : ControllerBase
             : request.ContentType.StartsWith("video/") ? "resources/video"
             : "resources/pdf";
 
-        var fileKey = $"{folder}/{Guid.NewGuid()}/{request.FileName}";
-        var uploadUrl = await _storage.GetUploadUrlAsync(fileKey, request.ContentType, 3600, ct);
+        var key = $"{folder}/{Guid.NewGuid()}/{request.FileName}";
+        var uploadUrl = await _storage.GetUploadUrlAsync(key, request.ContentType, 3600, ct);
+        var publicUrl = string.IsNullOrEmpty(_publicUrl) ? string.Empty : $"{_publicUrl.TrimEnd('/')}/{key}";
 
-        return Ok(new { success = true, data = new { uploadUrl, fileKey } });
+        return Ok(new { success = true, data = new { uploadUrl, publicUrl, key } });
     }
 }
 
-public record GetUploadUrlRequest(string FileName, string ContentType);
+public record GetUploadUrlRequest(string FileName, string ContentType, string? Purpose);

@@ -6,7 +6,7 @@ using MediatR;
 namespace EduPortal.Application.Features.Resources.Commands;
 
 public record PublishResourceCommand(Guid Id) : IRequest<Result>;
-public record UnpublishResourceCommand(Guid Id) : IRequest<Result>;
+public record ArchiveResourceCommand(Guid Id) : IRequest<Result>;
 
 public class PublishResourceCommandHandler : IRequestHandler<PublishResourceCommand, Result>
 {
@@ -27,16 +27,16 @@ public class PublishResourceCommandHandler : IRequestHandler<PublishResourceComm
     }
 }
 
-public class UnpublishResourceCommandHandler : IRequestHandler<UnpublishResourceCommand, Result>
+public class ArchiveResourceCommandHandler : IRequestHandler<ArchiveResourceCommand, Result>
 {
     private readonly IResourceRepository _resources;
-    public UnpublishResourceCommandHandler(IResourceRepository resources) => _resources = resources;
+    public ArchiveResourceCommandHandler(IResourceRepository resources) => _resources = resources;
 
-    public async Task<Result> Handle(UnpublishResourceCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ArchiveResourceCommand request, CancellationToken cancellationToken)
     {
         var resource = await _resources.GetByIdAsync(request.Id, cancellationToken);
         if (resource == null) return Result.NotFound("Resource not found.");
-        resource.Status = ResourceStatus.Unpublished;
+        resource.Status = ResourceStatus.Archived;
         await _resources.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
