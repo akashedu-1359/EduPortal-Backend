@@ -19,3 +19,18 @@ public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, Res
         return Result<List<CategoryDto>>.Success(categories.Select(CreateCategoryCommandHandler.ToDto).ToList());
     }
 }
+
+public record GetPublicCategoriesQuery : IRequest<Result<List<CategoryDto>>>;
+
+public class GetPublicCategoriesQueryHandler : IRequestHandler<GetPublicCategoriesQuery, Result<List<CategoryDto>>>
+{
+    private readonly ICategoryRepository _categories;
+
+    public GetPublicCategoriesQueryHandler(ICategoryRepository categories) => _categories = categories;
+
+    public async Task<Result<List<CategoryDto>>> Handle(GetPublicCategoriesQuery request, CancellationToken cancellationToken)
+    {
+        var categories = await _categories.GetVisibleAsync(cancellationToken);
+        return Result<List<CategoryDto>>.Success(categories.Select(CreateCategoryCommandHandler.ToDto).ToList());
+    }
+}

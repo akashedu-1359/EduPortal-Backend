@@ -9,11 +9,12 @@ namespace EduPortal.Tests.Auth;
 public class RegisterCommandTests
 {
     private readonly Mock<IUserRepository> _userRepo = new();
+    private readonly Mock<IRefreshTokenRepository> _refreshTokenRepo = new();
     private readonly Mock<ITokenService> _tokenService = new();
     private readonly Mock<IPasswordHasher> _passwordHasher = new();
 
     private RegisterCommandHandler CreateHandler() =>
-        new(_userRepo.Object, _tokenService.Object, _passwordHasher.Object);
+        new(_userRepo.Object, _refreshTokenRepo.Object, _tokenService.Object, _passwordHasher.Object);
 
     [Fact]
     public async Task Handle_NewEmail_CreatesUserAndReturns201()

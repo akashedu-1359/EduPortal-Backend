@@ -19,6 +19,9 @@ public class CategoryRepository : ICategoryRepository
     public Task<List<Category>> GetAllAsync(CancellationToken ct) =>
         _db.Categories.OrderBy(c => c.SortOrder).ToListAsync(ct);
 
+    public Task<List<Category>> GetVisibleAsync(CancellationToken ct) =>
+        _db.Categories.Where(c => c.IsVisible).OrderBy(c => c.SortOrder).ToListAsync(ct);
+
     public async Task AddAsync(Category category, CancellationToken ct) =>
         await _db.Categories.AddAsync(category, ct);
 
