@@ -14,6 +14,13 @@ public class ResourceRepository : IResourceRepository
     public Task<Resource?> GetByIdAsync(Guid id, CancellationToken ct) =>
         _db.Resources.Include(r => r.Category).FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted, ct);
 
+    public Task<Resource?> GetBySlugAsync(string slug, CancellationToken ct) =>
+        _db.Resources
+            .Include(r => r.Category)
+            .Include(r => r.CreatedByAdmin)
+            .Include(r => r.Enrollments)
+            .FirstOrDefaultAsync(r => r.Slug == slug && r.Status == Domain.Enums.ResourceStatus.Published && !r.IsDeleted, ct);
+
     public async Task<(List<Resource> Items, int Total)> GetPagedAsync(int page, int pageSize, ResourceStatus? status = null, Guid? categoryId = null, CancellationToken ct = default)
     {
         var query = _db.Resources.Include(r => r.Category).Where(r => !r.IsDeleted);

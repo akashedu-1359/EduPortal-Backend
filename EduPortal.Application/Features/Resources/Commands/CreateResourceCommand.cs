@@ -10,7 +10,8 @@ namespace EduPortal.Application.Features.Resources.Commands;
 public record CreateResourceCommand(
     string Title, string Description, ResourceType ResourceType,
     string? FileKey, string? ExternalUrl, string? BlogContent,
-    string? ThumbnailKey, decimal Price, Guid CategoryId) : IRequest<Result<ResourceDto>>;
+    string? ThumbnailKey, decimal Price, string Currency, Guid CategoryId,
+    string[]? Tags = null, int? DurationMinutes = null) : IRequest<Result<ResourceDto>>;
 
 public record ResourceDto(
     Guid Id, string Title, string Slug, string Description, string? ThumbnailUrl,
@@ -56,10 +57,14 @@ public class CreateResourceCommandHandler : IRequestHandler<CreateResourceComman
         var adminId = _currentUser.UserId ?? Guid.Empty;
         var resource = new Resource(request.Title, request.Description, request.ResourceType, request.Price, request.CategoryId, adminId)
         {
+            Slug = GenerateSlug(request.Title),
             FileKey = request.FileKey,
             ExternalUrl = request.ExternalUrl,
             BlogContent = request.BlogContent,
             ThumbnailKey = request.ThumbnailKey,
+            Currency = string.IsNullOrEmpty(request.Currency) ? "INR" : request.Currency,
+            Tags = request.Tags ?? Array.Empty<string>(),
+            DurationMinutes = request.DurationMinutes,
         };
         await _resources.AddAsync(resource, cancellationToken);
         await _resources.SaveChangesAsync(cancellationToken);
@@ -72,28 +77,28 @@ public class CreateResourceCommandHandler : IRequestHandler<CreateResourceComman
         return new ResourceDto(
             r.Id,
             r.Title,
-            GenerateSlug(r.Title),
+            string.IsNullOrEmpty(r.Slug) ? GenerateSlug(r.Title) : r.Slug,
             r.Description,
             thumbnailUrl,
             r.ResourceType,
             r.Status,
             r.Price > 0 ? "Paid" : "Free",
             r.Price,
-            null,
+            r.Currency,
             r.CategoryId,
             cat != null ? new ResourceCategoryDto(cat.Id, cat.Name, cat.Slug, cat.Description, cat.IsVisible) : null,
-            Array.Empty<string>(),
-            null,
+            r.Tags,
+            r.DurationMinutes,
             r.CreatedByAdminId,
             r.CreatedByAdmin?.FullName ?? string.Empty,
-            0,
-            r.Enrollments.Count,
+            r.ViewCount,
+            r.Enrollments?.Count ?? 0,
             r.Status == ResourceStatus.Published,
-            null,
+            r.PublishedAt,
             r.CreatedAt,
             r.UpdatedAt);
     }
 
-    private static string GenerateSlug(string title) =>
+    public static string GenerateSlug(string title) =>
         System.Text.RegularExpressions.Regex.Replace(title.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
 }

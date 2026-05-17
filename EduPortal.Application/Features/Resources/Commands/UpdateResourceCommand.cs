@@ -7,7 +7,8 @@ namespace EduPortal.Application.Features.Resources.Commands;
 
 public record UpdateResourceCommand(Guid Id, string Title, string Description,
     string? FileKey, string? ExternalUrl, string? BlogContent, string? ThumbnailKey,
-    decimal Price, bool IsFeatured, Guid CategoryId) : IRequest<Result<ResourceDto>>;
+    decimal Price, string? Currency, bool IsFeatured, Guid CategoryId,
+    string[]? Tags = null, int? DurationMinutes = null) : IRequest<Result<ResourceDto>>;
 
 public class UpdateResourceCommandHandler : IRequestHandler<UpdateResourceCommand, Result<ResourceDto>>
 {
@@ -29,14 +30,18 @@ public class UpdateResourceCommandHandler : IRequestHandler<UpdateResourceComman
         if (category == null) return Result<ResourceDto>.NotFound("Category not found.");
 
         resource.Title = request.Title;
+        resource.Slug = CreateResourceCommandHandler.GenerateSlug(request.Title);
         resource.Description = request.Description;
         if (request.FileKey != null) resource.FileKey = request.FileKey;
         if (request.ExternalUrl != null) resource.ExternalUrl = request.ExternalUrl;
         if (request.BlogContent != null) resource.BlogContent = request.BlogContent;
         if (request.ThumbnailKey != null) resource.ThumbnailKey = request.ThumbnailKey;
         resource.Price = request.Price;
+        if (!string.IsNullOrEmpty(request.Currency)) resource.Currency = request.Currency;
         resource.IsFeatured = request.IsFeatured;
         resource.CategoryId = request.CategoryId;
+        if (request.Tags != null) resource.Tags = request.Tags;
+        if (request.DurationMinutes.HasValue) resource.DurationMinutes = request.DurationMinutes;
 
         await _resources.SaveChangesAsync(cancellationToken);
         return Result<ResourceDto>.Success(CreateResourceCommandHandler.ToDto(resource));

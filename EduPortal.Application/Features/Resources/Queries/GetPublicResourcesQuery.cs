@@ -6,11 +6,9 @@ using MediatR;
 
 namespace EduPortal.Application.Features.Resources.Queries;
 
-public record GetPublicResourcesQuery(int PageNumber = 1, int PageSize = 20, ResourceType? Type = null, Guid? CategoryId = null, bool? Featured = null, string? Search = null) : IRequest<Result<PagedResult<PublicResourceDto>>>;
+public record GetPublicResourcesQuery(int PageNumber = 1, int PageSize = 20, ResourceType? Type = null, Guid? CategoryId = null, bool? Featured = null, string? Search = null) : IRequest<Result<PagedResult<ResourceDto>>>;
 
-public record PublicResourceDto(Guid Id, string Title, string Description, ResourceType ResourceType, decimal Price, bool IsFeatured, Guid CategoryId, string? CategoryName, string? ThumbnailUrl);
-
-public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResourcesQuery, Result<PagedResult<PublicResourceDto>>>
+public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResourcesQuery, Result<PagedResult<ResourceDto>>>
 {
     private readonly IResourceRepository _resources;
     private readonly IStorageService _storage;
@@ -19,7 +17,7 @@ public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResources
     public GetPublicResourcesQueryHandler(IResourceRepository resources, IStorageService storage, ICacheService cache)
     { _resources = resources; _storage = storage; _cache = cache; }
 
-    public async Task<Result<PagedResult<PublicResourceDto>>> Handle(GetPublicResourcesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedResult<ResourceDto>>> Handle(GetPublicResourcesQuery request, CancellationToken cancellationToken)
     {
         var (items, total) = await _resources.GetPagedAsync(request.PageNumber, request.PageSize, ResourceStatus.Published, request.CategoryId, cancellationToken);
 
@@ -31,15 +29,15 @@ public class GetPublicResourcesQueryHandler : IRequestHandler<GetPublicResources
             items = items.Where(r => r.Title.ToLower().Contains(s) || r.Description.ToLower().Contains(s)).ToList();
         }
 
-        var dtos = new List<PublicResourceDto>();
+        var dtos = new List<ResourceDto>();
         foreach (var r in items)
         {
             string? thumbnailUrl = null;
             if (!string.IsNullOrEmpty(r.ThumbnailKey))
                 thumbnailUrl = await _storage.GetReadUrlAsync(r.ThumbnailKey, 3600, cancellationToken);
-            dtos.Add(new PublicResourceDto(r.Id, r.Title, r.Description, r.ResourceType, r.Price, r.IsFeatured, r.CategoryId, r.Category?.Name, thumbnailUrl));
+            dtos.Add(CreateResourceCommandHandler.ToDto(r, r.Category, thumbnailUrl));
         }
 
-        return Result<PagedResult<PublicResourceDto>>.Success(PagedResult<PublicResourceDto>.Create(dtos, request.PageNumber, request.PageSize, total));
+        return Result<PagedResult<ResourceDto>>.Success(PagedResult<ResourceDto>.Create(dtos, request.PageNumber, request.PageSize, total));
     }
 }

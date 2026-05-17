@@ -746,9 +746,18 @@ namespace EduPortal.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByAdminId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasDefaultValue("INR")
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ExternalUrl")
                         .HasColumnType("text");
@@ -765,13 +774,25 @@ namespace EduPortal.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamptz");
+
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string[]>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.Property<string>("ThumbnailKey")
                         .HasColumnType("text");
@@ -784,6 +805,9 @@ namespace EduPortal.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamptz");
 
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
@@ -791,6 +815,8 @@ namespace EduPortal.Infrastructure.Migrations
                     b.HasIndex("CreatedByAdminId");
 
                     b.HasIndex("Price");
+
+                    b.HasIndex("Slug");
 
                     b.HasIndex("Status", "IsDeleted");
 
