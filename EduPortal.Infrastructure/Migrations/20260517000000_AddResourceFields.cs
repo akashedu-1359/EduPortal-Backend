@@ -32,7 +32,7 @@ namespace EduPortal.Infrastructure.Migrations
                 table: "Resources",
                 type: "text[]",
                 nullable: false,
-                defaultValue: new string[0]);
+                defaultValueSql: "'{}'::text[]");
 
             migrationBuilder.AddColumn<int>(
                 name: "DurationMinutes",

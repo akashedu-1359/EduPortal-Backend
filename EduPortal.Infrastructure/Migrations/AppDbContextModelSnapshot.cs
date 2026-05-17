@@ -792,6 +792,7 @@ namespace EduPortal.Infrastructure.Migrations
 
                     b.Property<string[]>("Tags")
                         .IsRequired()
+                        .HasDefaultValueSql("'{}'::text[]")
                         .HasColumnType("text[]");
 
                     b.Property<string>("ThumbnailKey")
