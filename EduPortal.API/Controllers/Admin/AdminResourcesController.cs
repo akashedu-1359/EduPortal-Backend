@@ -24,8 +24,10 @@ public class AdminResourcesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateResourceCommand command, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateResourceRequest req, CancellationToken ct)
     {
+        var price = req.PricingType == "Free" ? 0m : (req.Price ?? 0m);
+        var command = new CreateResourceCommand(req.Title, req.Description, req.Type, null, null, null, null, price, req.CategoryId);
         var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? StatusCode(201, new { success = true, data = result.Value })
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
@@ -63,6 +65,10 @@ public class AdminResourcesController : ControllerBase
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 }
+
+public record CreateResourceRequest(
+    string Title, string Description, ResourceType Type, Guid CategoryId,
+    string PricingType, decimal? Price, string? Currency, string[]? Tags, int? DurationMinutes);
 
 public record UpdateResourceRequest(string Title, string Description, string? FileKey, string? ExternalUrl,
     string? BlogContent, string? ThumbnailKey, decimal Price, bool IsFeatured, Guid CategoryId);

@@ -25,10 +25,6 @@ public class CreateResourceCommandValidator : AbstractValidator<CreateResourceCo
         RuleFor(x => x.Description).NotEmpty();
         RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CategoryId).NotEmpty();
-        RuleFor(x => x).Must(x => x.ResourceType != ResourceType.Blog || !string.IsNullOrEmpty(x.BlogContent))
-            .WithMessage("Blog content is required for blog resources.");
-        RuleFor(x => x).Must(x => x.ResourceType == ResourceType.Blog || !string.IsNullOrEmpty(x.FileKey) || !string.IsNullOrEmpty(x.ExternalUrl))
-            .WithMessage("FileKey or ExternalUrl required for Video/PDF resources.");
     }
 }
 
