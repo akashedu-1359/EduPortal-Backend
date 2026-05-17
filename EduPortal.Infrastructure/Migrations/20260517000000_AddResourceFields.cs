@@ -56,14 +56,7 @@ namespace EduPortal.Infrastructure.Migrations
             // Backfill slugs for existing resources from their titles
             migrationBuilder.Sql(@"
                 UPDATE ""Resources""
-                SET ""Slug"" = LOWER(
-                    TRIM(BOTH '-' FROM
-                        REGEXP_REPLACE(
-                            REGEXP_REPLACE(LOWER(TRIM(""Title"")), '[^a-z0-9\s-]', '', 'g'),
-                            '\s+', '-', 'g'
-                        )
-                    )
-                )
+                SET ""Slug"" = TRIM('-' FROM REGEXP_REPLACE(LOWER(TRIM(""Title"")), '[^a-z0-9]+', '-', 'g'))
                 WHERE ""Slug"" = '';
             ");
 
