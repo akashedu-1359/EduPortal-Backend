@@ -23,10 +23,11 @@ public class NextJsRevalidationService : IRevalidationService
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{_frontendUrl}/api/revalidate");
-            request.Headers.Add("x-revalidation-secret", _secret);
-            request.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { tag }),
-                System.Text.Encoding.UTF8, "application/json");
+            var body = System.Text.Json.JsonSerializer.Serialize(new { secret = _secret, tags = new[] { tag } });
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{_frontendUrl}/api/revalidate")
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
+            };
             await _http.SendAsync(request, ct);
         }
         catch (Exception ex)

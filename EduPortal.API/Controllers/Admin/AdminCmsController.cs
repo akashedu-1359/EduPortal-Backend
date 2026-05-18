@@ -13,8 +13,10 @@ public class AdminCmsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICmsRepository _cms;
+    private readonly IRevalidationService _revalidation;
 
-    public AdminCmsController(IMediator mediator, ICmsRepository cms) { _mediator = mediator; _cms = cms; }
+    public AdminCmsController(IMediator mediator, ICmsRepository cms, IRevalidationService revalidation)
+    { _mediator = mediator; _cms = cms; _revalidation = revalidation; }
 
     // Banners
     [HttpGet("banners")]
@@ -40,6 +42,7 @@ public class AdminCmsController : ControllerBase
         };
         await _cms.AddBannerAsync(banner, ct);
         await _cms.SaveChangesAsync(ct);
+        _ = _revalidation.TriggerRevalidationAsync("cms-homepage", ct);
         return StatusCode(201, new { success = true, data = ToBannerDto(banner) });
     }
 
@@ -57,6 +60,7 @@ public class AdminCmsController : ControllerBase
         banner.IsActive = req.IsActive;
         banner.UpdatedAt = DateTime.UtcNow;
         await _cms.SaveChangesAsync(ct);
+        _ = _revalidation.TriggerRevalidationAsync("cms-homepage", ct);
         return Ok(new { success = true, data = ToBannerDto(banner) });
     }
 
@@ -67,6 +71,7 @@ public class AdminCmsController : ControllerBase
         if (banner == null) return NotFound(new { success = false, error = "Banner not found." });
         _cms.RemoveBanner(banner);
         await _cms.SaveChangesAsync(ct);
+        _ = _revalidation.TriggerRevalidationAsync("cms-homepage", ct);
         return Ok(new { success = true });
     }
 
