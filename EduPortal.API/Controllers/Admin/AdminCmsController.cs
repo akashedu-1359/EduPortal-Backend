@@ -18,15 +18,63 @@ public class AdminCmsController : ControllerBase
 
     // Banners
     [HttpGet("banners")]
-    public async Task<IActionResult> GetBanners(CancellationToken ct) =>
-        Ok(new { success = true, data = await _cms.GetBannersAsync(ct) });
-
-    [HttpPut("banners/{key}")]
-    public async Task<IActionResult> UpdateBanner(string key, [FromBody] UpdateBannerCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> GetBanners(CancellationToken ct)
     {
-        var result = await _mediator.Send(cmd with { Key = key }, ct);
-        return result.IsSuccess ? Ok(new { success = true }) : StatusCode(result.StatusCode, new { success = false, error = result.Error });
+        var banners = await _cms.GetBannersAsync(ct);
+        return Ok(new { success = true, data = banners.Select(ToBannerDto) });
     }
+
+    [HttpPost("banners")]
+    public async Task<IActionResult> CreateBanner([FromBody] BannerRequest req, CancellationToken ct)
+    {
+        var banner = new EduPortal.Domain.Entities.Cms.CmsBanner
+        {
+            Key = Guid.NewGuid().ToString(),
+            Type = req.Type,
+            ImageKey = req.ImageUrl ?? "",
+            Headline = req.Title,
+            Subheadline = req.Subtitle,
+            CtaText = req.CtaText,
+            CtaLink = req.CtaUrl,
+            IsActive = req.IsActive,
+        };
+        await _cms.AddBannerAsync(banner, ct);
+        await _cms.SaveChangesAsync(ct);
+        return StatusCode(201, new { success = true, data = ToBannerDto(banner) });
+    }
+
+    [HttpPut("banners/{id:guid}")]
+    public async Task<IActionResult> UpdateBanner(Guid id, [FromBody] BannerRequest req, CancellationToken ct)
+    {
+        var banner = await _cms.GetBannerByIdAsync(id, ct);
+        if (banner == null) return NotFound(new { success = false, error = "Banner not found." });
+        banner.Type = req.Type;
+        banner.ImageKey = req.ImageUrl ?? banner.ImageKey;
+        banner.Headline = req.Title;
+        banner.Subheadline = req.Subtitle;
+        banner.CtaText = req.CtaText;
+        banner.CtaLink = req.CtaUrl;
+        banner.IsActive = req.IsActive;
+        banner.UpdatedAt = DateTime.UtcNow;
+        await _cms.SaveChangesAsync(ct);
+        return Ok(new { success = true, data = ToBannerDto(banner) });
+    }
+
+    [HttpDelete("banners/{id:guid}")]
+    public async Task<IActionResult> DeleteBanner(Guid id, CancellationToken ct)
+    {
+        var banner = await _cms.GetBannerByIdAsync(id, ct);
+        if (banner == null) return NotFound(new { success = false, error = "Banner not found." });
+        _cms.RemoveBanner(banner);
+        await _cms.SaveChangesAsync(ct);
+        return Ok(new { success = true });
+    }
+
+    private static object ToBannerDto(EduPortal.Domain.Entities.Cms.CmsBanner b) => new
+    {
+        b.Id, b.Type, title = b.Headline, subtitle = b.Subheadline,
+        imageUrl = b.ImageKey, ctaText = b.CtaText, ctaUrl = b.CtaLink, b.IsActive
+    };
 
     // Pages
     [HttpGet("pages")]
@@ -152,6 +200,7 @@ public class AdminCmsController : ControllerBase
     }
 }
 
+public record BannerRequest(string Type, string Title, string? Subtitle, string? ImageUrl, string? CtaText, string? CtaUrl, bool IsActive);
 public record UpdatePageRequest(string Title, string Content, string? MetaTitle, string? MetaDescription, bool IsPublished);
 public record UpdateFaqRequest(string Question, string Answer, int SortOrder, bool IsVisible);
 public record UpdateSectionRequest(bool IsVisible);

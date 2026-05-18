@@ -10,8 +10,10 @@ public class CmsRepository : ICmsRepository
     public CmsRepository(AppDbContext db) => _db = db;
 
     public Task<List<CmsBanner>> GetBannersAsync(CancellationToken ct) => _db.CmsBanners.ToListAsync(ct);
+    public Task<CmsBanner?> GetBannerByIdAsync(Guid id, CancellationToken ct) => _db.CmsBanners.FindAsync(new object[] { id }, ct).AsTask();
     public Task<CmsBanner?> GetBannerByKeyAsync(string key, CancellationToken ct) => _db.CmsBanners.FirstOrDefaultAsync(b => b.Key == key, ct);
     public async Task AddBannerAsync(CmsBanner banner, CancellationToken ct) => await _db.CmsBanners.AddAsync(banner, ct);
+    public void RemoveBanner(CmsBanner banner) => _db.CmsBanners.Remove(banner);
 
     public Task<List<CmsPage>> GetPagesAsync(CancellationToken ct) => _db.CmsPages.ToListAsync(ct);
     public Task<CmsPage?> GetPageBySlugAsync(string slug, CancellationToken ct) => _db.CmsPages.FirstOrDefaultAsync(p => p.Slug == slug, ct);

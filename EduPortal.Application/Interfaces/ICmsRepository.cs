@@ -5,8 +5,10 @@ namespace EduPortal.Application.Interfaces;
 public interface ICmsRepository
 {
     Task<List<CmsBanner>> GetBannersAsync(CancellationToken ct = default);
+    Task<CmsBanner?> GetBannerByIdAsync(Guid id, CancellationToken ct = default);
     Task<CmsBanner?> GetBannerByKeyAsync(string key, CancellationToken ct = default);
     Task AddBannerAsync(CmsBanner banner, CancellationToken ct = default);
+    void RemoveBanner(CmsBanner banner);
 
     Task<List<CmsPage>> GetPagesAsync(CancellationToken ct = default);
     Task<CmsPage?> GetPageBySlugAsync(string slug, CancellationToken ct = default);
