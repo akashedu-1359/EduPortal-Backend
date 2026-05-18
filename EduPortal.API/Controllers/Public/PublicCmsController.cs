@@ -12,6 +12,48 @@ public class PublicCmsController : ControllerBase
 
     public PublicCmsController(ICmsRepository cms, ICacheService cache) { _cms = cms; _cache = cache; }
 
+    [HttpGet("homepage")]
+    public async Task<IActionResult> GetHomepage(CancellationToken ct)
+    {
+        var banners = await _cms.GetBannersAsync(ct);
+        var promoBanners = await _cms.GetActivePromoBannersAsync(ct);
+        var sections = await _cms.GetSectionsAsync(ct);
+        var settings = await _cms.GetSettingsAsync(ct);
+        var flags = await _cms.GetFeatureFlagsAsync(ct);
+
+        var activeBanners = banners
+            .Where(b => b.IsActive)
+            .Select(b => new
+            {
+                b.Id, b.Type, title = b.Headline, subtitle = b.Subheadline,
+                imageUrl = b.ImageKey, ctaText = b.CtaText, ctaUrl = b.CtaLink,
+                b.IsActive, order = 0
+            });
+
+        var promoBanner = promoBanners.FirstOrDefault();
+
+        var settingsDict = settings.ToDictionary(s => s.Key, s => s.Value);
+        var siteSettings = new
+        {
+            siteName = settingsDict.GetValueOrDefault("SiteName", "EduPortal"),
+            logoUrl = settingsDict.GetValueOrDefault("LogoUrl"),
+            supportEmail = settingsDict.GetValueOrDefault("SupportEmail", "support@eduportal.com"),
+        };
+
+        var featureFlags = flags.ToDictionary(f => f.Key, f => f.IsEnabled);
+
+        var data = new
+        {
+            banners = activeBanners,
+            promoBanner,
+            sections = sections.Select(s => new { s.Key, s.IsVisible, s.Label }),
+            settings = siteSettings,
+            featureFlags,
+        };
+
+        return Ok(new { success = true, data });
+    }
+
     [HttpGet("banner/{key}")]
     public async Task<IActionResult> GetBanner(string key, CancellationToken ct)
     {
