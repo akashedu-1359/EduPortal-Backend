@@ -17,14 +17,14 @@ public class AnalyticsRepository : IAnalyticsRepository
     public Task<int> GetTotalExamsAsync(CancellationToken ct) => _db.Exams.CountAsync(ct);
     public Task<int> GetTotalCertificatesAsync(CancellationToken ct) => _db.Certificates.CountAsync(ct);
 
-    public Task<decimal> GetTotalRevenueAsync(CancellationToken ct) =>
-        _db.Orders.Where(o => o.Status == OrderStatus.Completed).SumAsync(o => o.Amount, ct);
+    public async Task<decimal> GetTotalRevenueAsync(CancellationToken ct) =>
+        await _db.Orders.Where(o => o.Status == OrderStatus.Completed).SumAsync(o => (decimal?)o.Amount, ct) ?? 0m;
 
-    public Task<decimal> GetRevenueThisMonthAsync(CancellationToken ct)
+    public async Task<decimal> GetRevenueThisMonthAsync(CancellationToken ct)
     {
         var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        return _db.Orders.Where(o => o.Status == OrderStatus.Completed && o.CreatedAt >= start)
-            .SumAsync(o => o.Amount, ct);
+        return await _db.Orders.Where(o => o.Status == OrderStatus.Completed && o.CreatedAt >= start)
+            .SumAsync(o => (decimal?)o.Amount, ct) ?? 0m;
     }
 
     public async Task<List<(DateOnly Date, decimal Amount)>> GetRevenueByDayAsync(int days, CancellationToken ct)
