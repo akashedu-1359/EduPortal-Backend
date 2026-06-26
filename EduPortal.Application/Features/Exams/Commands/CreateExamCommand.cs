@@ -35,8 +35,9 @@ public class CreateExamCommandHandler : IRequestHandler<CreateExamCommand, Resul
             ScheduledEndAt = request.ScheduledEndAt
         };
 
-        foreach (var q in request.Questions)
-            exam.Questions.Add(new Question(exam.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.CorrectOptionIndex, q.SortOrder));
+        if (request.Questions is { Count: > 0 })
+            foreach (var q in request.Questions)
+                exam.Questions.Add(new Question(exam.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.CorrectOptionIndex, q.SortOrder));
 
         await _exams.AddAsync(exam, cancellationToken);
         await _exams.SaveChangesAsync(cancellationToken);
