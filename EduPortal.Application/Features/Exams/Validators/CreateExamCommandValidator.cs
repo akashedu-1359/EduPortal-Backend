@@ -12,7 +12,6 @@ public class CreateExamCommandValidator : AbstractValidator<CreateExamCommand>
         RuleFor(x => x.DurationMinutes).GreaterThan(0);
         RuleFor(x => x.PassingPercentage).InclusiveBetween(0, 100);
         RuleFor(x => x.MaxAttempts).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Questions).NotEmpty().WithMessage("At least one question is required.");
         RuleForEach(x => x.Questions).ChildRules(q =>
         {
             q.RuleFor(x => x.QuestionText).NotEmpty().MinimumLength(3);
