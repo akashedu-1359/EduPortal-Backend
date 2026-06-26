@@ -27,6 +27,16 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         if (exam == null) return Result<StartAttemptResponse>.NotFound("Exam not found.");
         if (exam.Status != ExamStatus.Active) return Result<StartAttemptResponse>.Failure("Exam is not currently active.", 400);
 
+        var activeAttempt = await _exams.GetActiveAttemptAsync(userId, request.ExamId, cancellationToken);
+        if (activeAttempt != null)
+        {
+            var questions = activeAttempt.Exam.Questions.OrderBy(q => q.SortOrder)
+                .Select(q => new AttemptQuestionDto(q.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.SortOrder))
+                .ToList();
+            var expiresAt = activeAttempt.StartedAt.AddMinutes(activeAttempt.Exam.DurationMinutes);
+            return Result<StartAttemptResponse>.Success(new StartAttemptResponse(activeAttempt.Id, activeAttempt.StartedAt, expiresAt, questions));
+        }
+
         var attemptCount = await _exams.GetAttemptCountAsync(userId, request.ExamId, cancellationToken);
         if (exam.MaxAttempts > 0 && attemptCount >= exam.MaxAttempts)
             return Result<StartAttemptResponse>.Failure($"Maximum attempts ({exam.MaxAttempts}) reached.", 400);
@@ -35,11 +45,11 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         await _exams.AddAttemptAsync(attempt, cancellationToken);
         await _exams.SaveChangesAsync(cancellationToken);
 
-        var questions = exam.Questions.OrderBy(q => q.SortOrder)
+        var newQuestions = exam.Questions.OrderBy(q => q.SortOrder)
             .Select(q => new AttemptQuestionDto(q.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.SortOrder))
             .ToList();
 
-        var expiresAt = attempt.StartedAt.AddMinutes(exam.DurationMinutes);
-        return Result<StartAttemptResponse>.Created(new StartAttemptResponse(attempt.Id, attempt.StartedAt, expiresAt, questions));
+        var newExpiresAt = attempt.StartedAt.AddMinutes(exam.DurationMinutes);
+        return Result<StartAttemptResponse>.Created(new StartAttemptResponse(attempt.Id, attempt.StartedAt, newExpiresAt, newQuestions));
     }
 }

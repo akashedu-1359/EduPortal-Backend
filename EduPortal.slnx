@@ -4,4 +4,5 @@
   <Project Path="EduPortal.Domain/EduPortal.Domain.csproj" />
   <Project Path="EduPortal.Infrastructure/EduPortal.Infrastructure.csproj" />
   <Project Path="EduPortal.Tests/EduPortal.Tests.csproj" />
+  <Project Path="EduPortal.IntegrationTests/EduPortal.IntegrationTests.csproj" />
 </Solution>

@@ -29,6 +29,13 @@ public class AdminExamsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
     }
 
+    [HttpGet("{examId:guid}/questions")]
+    public async Task<IActionResult> GetQuestions(Guid examId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetExamQuestionsQuery(examId), ct);
+        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateExamCommand command, CancellationToken ct)
     {

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace EduPortal.Application.Features.Exams.Queries;
 
-public record GetExamsQuery(int Page = 1, int PageSize = 20) : IRequest<Result<PagedResult<ExamSummaryDto>>>;
+public record GetExamsQuery(int Page = 1, int PageSize = 20, bool ActiveOnly = false) : IRequest<Result<PagedResult<ExamSummaryDto>>>;
 
 public record ExamSummaryDto(
     Guid Id,
@@ -51,7 +51,9 @@ public class GetExamsQueryHandler : IRequestHandler<GetExamsQuery, Result<PagedR
 
     public async Task<Result<PagedResult<ExamSummaryDto>>> Handle(GetExamsQuery request, CancellationToken cancellationToken)
     {
-        var (items, total) = await _exams.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
+        var (items, total) = request.ActiveOnly
+            ? await _exams.GetPagedActiveAsync(request.Page, request.PageSize, cancellationToken)
+            : await _exams.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
         var dtos = items.Select(e => new ExamSummaryDto(
             e.Id, e.Title, e.Description, e.DurationMinutes,
             e.PassingPercentage, e.MaxAttempts, e.Status.ToString(),

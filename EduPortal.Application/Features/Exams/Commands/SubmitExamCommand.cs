@@ -31,6 +31,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, Resul
         var exam = await _exams.GetByIdAsync(attempt.ExamId, includeQuestions: true, ct: cancellationToken);
         if (exam == null) return Result<SubmitExamResponse>.NotFound("Exam not found.");
 
+        var deadline = attempt.StartedAt.AddMinutes(exam.DurationMinutes).AddSeconds(30);
+        if (DateTime.UtcNow > deadline)
+        {
+            attempt.TimeOut();
+            await _exams.SaveChangesAsync(cancellationToken);
+            return Result<SubmitExamResponse>.Failure("Exam time has expired.", 400);
+        }
+
         var questionMap = exam.Questions.ToDictionary(q => q.Id);
         int correct = 0;
 

@@ -12,27 +12,32 @@ using Serilog;
 using System.Threading.RateLimiting;
 using EduPortal.API.Middleware;
 
-// Bootstrap logger for startup errors
-Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
+// Bootstrap logger for startup errors (skip in Testing to avoid frozen-logger issues)
+var isTesting = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing";
+if (!isTesting)
+    Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Serilog
-    builder.Host.UseSerilog((ctx, services, cfg) =>
+    // Serilog (skipped in Testing - WebApplicationFactory handles logging)
+    if (builder.Environment.EnvironmentName != "Testing")
     {
-        cfg.ReadFrom.Configuration(ctx.Configuration)
-           .ReadFrom.Services(services)
-           .Enrich.FromLogContext()
-           .Enrich.WithMachineName()
-           .Enrich.WithThreadId();
+        builder.Host.UseSerilog((ctx, services, cfg) =>
+        {
+            cfg.ReadFrom.Configuration(ctx.Configuration)
+               .ReadFrom.Services(services)
+               .Enrich.FromLogContext()
+               .Enrich.WithMachineName()
+               .Enrich.WithThreadId();
 
-        if (ctx.HostingEnvironment.IsDevelopment())
-            cfg.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
-        else
-            cfg.WriteTo.Console().WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day);
-    });
+            if (ctx.HostingEnvironment.IsDevelopment())
+                cfg.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+            else
+                cfg.WriteTo.Console().WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day);
+        });
+    }
 
     // Application & Infrastructure layers
     builder.Services.AddApplication();
@@ -95,22 +100,22 @@ try
     });
 
     // Rate Limiting
+    var isNonProdEnv = builder.Environment.IsDevelopment()
+                       || builder.Environment.EnvironmentName == "Testing";
     builder.Services.AddRateLimiter(opts =>
     {
-        // Login: 5 per 15 min per IP
         opts.AddSlidingWindowLimiter("login", limiterOpts =>
         {
-            limiterOpts.PermitLimit = 5;
+            limiterOpts.PermitLimit = isNonProdEnv ? int.MaxValue : 5;
             limiterOpts.Window = TimeSpan.FromMinutes(15);
             limiterOpts.SegmentsPerWindow = 3;
             limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
             limiterOpts.QueueLimit = 0;
         });
 
-        // Global: 100 per min per IP
         opts.AddFixedWindowLimiter("global", limiterOpts =>
         {
-            limiterOpts.PermitLimit = 100;
+            limiterOpts.PermitLimit = isNonProdEnv ? int.MaxValue : 100;
             limiterOpts.Window = TimeSpan.FromMinutes(1);
             limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
             limiterOpts.QueueLimit = 0;
@@ -135,9 +140,10 @@ try
 
     var app = builder.Build();
 
-    // Migrate & Seed on startup
-    using (var scope = app.Services.CreateScope())
+    // Migrate & Seed on startup (skipped during integration tests)
+    if (app.Environment.EnvironmentName != "Testing")
     {
+        using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
         await DataSeeder.SeedAsync(db, scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>());
@@ -200,3 +206,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }

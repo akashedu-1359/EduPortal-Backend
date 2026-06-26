@@ -1,5 +1,6 @@
 using EduPortal.Application.Interfaces;
 using EduPortal.Domain.Entities;
+using EduPortal.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace EduPortal.Infrastructure.Persistence.Repositories;
@@ -25,11 +26,36 @@ public class ExamRepository : IExamRepository
         return (items, total);
     }
 
+    public async Task<(List<Exam> Items, int Total)> GetPagedActiveAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.Exams.Where(e => !e.IsDeleted && e.Status == ExamStatus.Active).Include(e => e.Questions);
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(e => e.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
     public Task<ExamAttempt?> GetAttemptAsync(Guid attemptId, CancellationToken ct) =>
         _db.ExamAttempts.Include(a => a.Answers).FirstOrDefaultAsync(a => a.Id == attemptId, ct);
 
     public Task<int> GetAttemptCountAsync(Guid userId, Guid examId, CancellationToken ct) =>
         _db.ExamAttempts.CountAsync(a => a.UserId == userId && a.ExamId == examId, ct);
+
+    public async Task<(List<ExamAttempt> Items, int Total)> GetPagedAttemptsByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.ExamAttempts.Where(a => a.UserId == userId).Include(a => a.Exam);
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(a => a.StartedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public Task<ExamAttempt?> GetActiveAttemptAsync(Guid userId, Guid examId, CancellationToken ct = default) =>
+        _db.ExamAttempts.Include(a => a.Exam).ThenInclude(e => e.Questions)
+            .FirstOrDefaultAsync(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress, ct);
+
+    public Task<Question?> GetQuestionByIdAsync(Guid id, CancellationToken ct = default) =>
+        _db.Questions.FirstOrDefaultAsync(q => q.Id == id, ct);
+
+    public void RemoveQuestion(Question question) => _db.Questions.Remove(question);
 
     public async Task AddAsync(Exam exam, CancellationToken ct) =>
         await _db.Exams.AddAsync(exam, ct);

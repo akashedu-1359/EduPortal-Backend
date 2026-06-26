@@ -32,10 +32,13 @@ public class AnalyticsRepository : IAnalyticsRepository
         var from = DateTime.UtcNow.AddDays(-days).Date;
         var rows = await _db.Orders
             .Where(o => o.Status == OrderStatus.Completed && o.CreatedAt >= from)
-            .GroupBy(o => o.CreatedAt.Date)
-            .Select(g => new { Date = g.Key, Amount = g.Sum(o => o.Amount) })
+            .Select(o => new { o.CreatedAt, o.Amount })
             .ToListAsync(ct);
-        return rows.Select(r => (DateOnly.FromDateTime(r.Date), r.Amount)).ToList();
+        return rows
+            .GroupBy(o => DateOnly.FromDateTime(o.CreatedAt))
+            .Select(g => (g.Key, g.Sum(o => o.Amount)))
+            .OrderBy(r => r.Key)
+            .ToList();
     }
 
     public async Task<List<(DateOnly Date, int Count)>> GetEnrollmentsByDayAsync(int days, CancellationToken ct)
@@ -43,9 +46,12 @@ public class AnalyticsRepository : IAnalyticsRepository
         var from = DateTime.UtcNow.AddDays(-days).Date;
         var rows = await _db.Enrollments
             .Where(e => e.EnrolledAt >= from)
-            .GroupBy(e => e.EnrolledAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .Select(e => new { e.EnrolledAt })
             .ToListAsync(ct);
-        return rows.Select(r => (DateOnly.FromDateTime(r.Date), r.Count)).ToList();
+        return rows
+            .GroupBy(e => DateOnly.FromDateTime(e.EnrolledAt))
+            .Select(g => (g.Key, g.Count()))
+            .OrderBy(r => r.Key)
+            .ToList();
     }
 }
