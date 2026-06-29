@@ -14,7 +14,14 @@ public class EnrollmentRepository : IEnrollmentRepository
         _db.Enrollments.AnyAsync(e => e.UserId == userId && e.ResourceId == resourceId, ct);
 
     public Task<List<Enrollment>> GetByUserIdAsync(Guid userId, CancellationToken ct) =>
-        _db.Enrollments.Include(e => e.Resource).Where(e => e.UserId == userId).ToListAsync(ct);
+        _db.Enrollments
+            .Include(e => e.Resource)
+                .ThenInclude(r => r.Category)
+            .Include(e => e.Resource)
+                .ThenInclude(r => r.CreatedByAdmin)
+            .Where(e => e.UserId == userId)
+            .OrderByDescending(e => e.EnrolledAt)
+            .ToListAsync(ct);
 
     public async Task AddAsync(Enrollment enrollment, CancellationToken ct) =>
         await _db.Enrollments.AddAsync(enrollment, ct);
