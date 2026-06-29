@@ -31,8 +31,8 @@ public class CreateExamCommandHandler : IRequestHandler<CreateExamCommand, Resul
         var exam = new Exam(request.Title, request.Description, request.DurationMinutes, request.PassingPercentage, adminId)
         {
             MaxAttempts = request.MaxAttempts,
-            ScheduledStartAt = request.ScheduledStartAt,
-            ScheduledEndAt = request.ScheduledEndAt
+            ScheduledStartAt = DateTimeUtc.Normalize(request.ScheduledStartAt),
+            ScheduledEndAt = DateTimeUtc.Normalize(request.ScheduledEndAt),
         };
 
         if (request.Questions is { Count: > 0 })

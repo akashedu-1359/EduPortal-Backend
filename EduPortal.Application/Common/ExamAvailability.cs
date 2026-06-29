@@ -16,15 +16,13 @@ public static class ExamAvailability
     public static string? GetUnavailableMessage(Exam exam, DateTime utcNow)
     {
         if (exam.Status == ExamStatus.Scheduled)
-            return exam.ScheduledStartAt.HasValue
-                ? $"This exam opens on {exam.ScheduledStartAt.Value:u} UTC."
-                : "This exam is scheduled but not yet open.";
+            return "This exam is not open yet.";
 
         if (exam.Status != ExamStatus.Active)
             return "Exam is not currently active.";
 
         if (exam.ScheduledStartAt.HasValue && exam.ScheduledStartAt.Value > utcNow)
-            return $"This exam opens on {exam.ScheduledStartAt.Value:u} UTC.";
+            return "This exam is not open yet.";
 
         if (exam.ScheduledEndAt.HasValue && exam.ScheduledEndAt.Value <= utcNow)
             return "This exam has closed.";

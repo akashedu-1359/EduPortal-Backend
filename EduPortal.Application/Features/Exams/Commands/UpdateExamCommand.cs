@@ -32,8 +32,8 @@ public class UpdateExamCommandHandler : IRequestHandler<UpdateExamCommand, Resul
         exam.DurationMinutes = request.DurationMinutes;
         exam.PassingPercentage = request.PassingPercentage;
         exam.MaxAttempts = request.MaxAttempts;
-        exam.ScheduledStartAt = request.ScheduledStartAt;
-        exam.ScheduledEndAt = request.ScheduledEndAt;
+        exam.ScheduledStartAt = DateTimeUtc.Normalize(request.ScheduledStartAt);
+        exam.ScheduledEndAt = DateTimeUtc.Normalize(request.ScheduledEndAt);
 
         await _exams.SaveChangesAsync(cancellationToken);
         return Result.Success();
