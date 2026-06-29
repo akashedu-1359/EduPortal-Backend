@@ -132,6 +132,34 @@ public class ExamRepository : IExamRepository
     public Task<Certificate?> GetCertificateAsync(Guid id, CancellationToken ct) =>
         _db.Certificates.FirstOrDefaultAsync(c => c.Id == id, ct);
 
+    public async Task<(List<Certificate> Items, int Total)> GetPagedCertificatesAsync(
+        int page, int pageSize, string? search, CancellationToken ct)
+    {
+        var query = _db.Certificates
+            .Include(c => c.User)
+            .Include(c => c.ExamAttempt)
+                .ThenInclude(a => a.Exam)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(c =>
+                c.User.FullName.ToLower().Contains(term) ||
+                c.User.Email.ToLower().Contains(term) ||
+                c.ExamAttempt.Exam.Title.ToLower().Contains(term));
+        }
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(c => c.IssuedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
     public Task<List<Certificate>> GetCertificatesByUserIdAsync(Guid userId, CancellationToken ct) =>
         _db.Certificates.Where(c => c.UserId == userId).OrderByDescending(c => c.IssuedAt).ToListAsync(ct);
 
