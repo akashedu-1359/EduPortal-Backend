@@ -19,56 +19,63 @@ public class AdminExamsController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetExamsQuery(page, pageSize), ct);
-        return Ok(result.Value);
+        return Ok(new { success = true, data = result.Value });
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetExamDetailQuery(id, IsAdmin: true), ct);
-        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true, data = result.Value })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpGet("{examId:guid}/questions")]
     public async Task<IActionResult> GetQuestions(Guid examId, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetExamQuestionsQuery(examId), ct);
-        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true, data = result.Value })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateExamCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.IsSuccess ? StatusCode(201, new { id = result.Value }) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? StatusCode(201, new { success = true, data = new { id = result.Value } })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateExamCommand command, CancellationToken ct)
     {
-        if (id != command.Id) return BadRequest(new { error = "ID mismatch." });
+        if (id != command.Id) return BadRequest(new { success = false, error = "ID mismatch." });
         var result = await _mediator.Send(command, ct);
-        return result.IsSuccess ? NoContent() : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new DeleteExamCommand(id), ct);
-        return result.IsSuccess ? NoContent() : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPost("{id:guid}/publish")]
     public async Task<IActionResult> Publish(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new PublishExamCommand(id), ct);
-        return result.IsSuccess ? Ok(new { message = "Exam published." }) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true, message = "Exam published." })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPost("{id:guid}/unpublish")]
     public async Task<IActionResult> Unpublish(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new UnpublishExamCommand(id), ct);
-        return result.IsSuccess ? Ok(new { message = "Exam unpublished." }) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true, message = "Exam unpublished." })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 }
