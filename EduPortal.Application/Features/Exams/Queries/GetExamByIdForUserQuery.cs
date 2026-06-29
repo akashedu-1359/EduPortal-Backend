@@ -10,7 +10,8 @@ public record GetExamByIdForUserQuery(Guid ExamId) : IRequest<Result<UserExamDet
 public record UserExamDetailDto(
     Guid Id, string Title, string Description, int DurationMinutes,
     decimal PassingPercentage, int MaxAttempts, string Status,
-    int QuestionCount, int UserAttemptCount, DateTime CreatedAt);
+    int QuestionCount, int UserAttemptCount, DateTime CreatedAt,
+    DateTime? ScheduledStartAt, DateTime? ScheduledEndAt, bool IsTakeable);
 
 public class GetExamByIdForUserQueryHandler : IRequestHandler<GetExamByIdForUserQuery, Result<UserExamDetailDto>>
 {
@@ -23,16 +24,19 @@ public class GetExamByIdForUserQueryHandler : IRequestHandler<GetExamByIdForUser
     public async Task<Result<UserExamDetailDto>> Handle(GetExamByIdForUserQuery request, CancellationToken cancellationToken)
     {
         var exam = await _exams.GetByIdAsync(request.ExamId, includeQuestions: true, ct: cancellationToken);
-        if (exam == null || exam.Status != ExamStatus.Active)
+        if (exam == null || (exam.Status != ExamStatus.Active && exam.Status != ExamStatus.Scheduled))
             return Result<UserExamDetailDto>.NotFound("Exam not found.");
 
         var userId = _currentUser.UserId ?? Guid.Empty;
         var attemptCount = await _exams.GetAttemptCountAsync(userId, request.ExamId, cancellationToken);
+        var now = DateTime.UtcNow;
+        var isTakeable = ExamAvailability.IsTakeable(exam, now);
 
         var dto = new UserExamDetailDto(
             exam.Id, exam.Title, exam.Description, exam.DurationMinutes,
             exam.PassingPercentage, exam.MaxAttempts, exam.Status.ToString(),
-            exam.Questions.Count, attemptCount, exam.CreatedAt);
+            exam.Questions.Count, attemptCount, exam.CreatedAt,
+            exam.ScheduledStartAt, exam.ScheduledEndAt, isTakeable);
 
         return Result<UserExamDetailDto>.Success(dto);
     }

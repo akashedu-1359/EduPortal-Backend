@@ -25,7 +25,11 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
         var exam = await _exams.GetByIdAsync(request.ExamId, includeQuestions: true, ct: cancellationToken);
         if (exam == null) return Result<StartAttemptResponse>.NotFound("Exam not found.");
-        if (exam.Status != ExamStatus.Active) return Result<StartAttemptResponse>.Failure("Exam is not currently active.", 400);
+
+        var now = DateTime.UtcNow;
+        var unavailable = ExamAvailability.GetUnavailableMessage(exam, now);
+        if (unavailable != null)
+            return Result<StartAttemptResponse>.Failure(unavailable, 400);
 
         var activeAttempt = await _exams.GetActiveAttemptAsync(userId, request.ExamId, cancellationToken);
         if (activeAttempt != null)

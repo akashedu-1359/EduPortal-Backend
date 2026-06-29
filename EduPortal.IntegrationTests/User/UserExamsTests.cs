@@ -115,6 +115,32 @@ public class UserExamsTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task StartExam_BeforeScheduledStart_Returns400()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        var (_, userId) = await CreateTestUserAsync();
+        AuthenticateAsUser(userId);
+
+        using (var scope = CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var exam = new DomainEntities.Exam("Scheduled Exam", "Future exam", 30, 60m, adminId)
+            {
+                MaxAttempts = 3,
+                Status = ExamStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+                ScheduledEndAt = DateTime.UtcNow.AddDays(2),
+            };
+            exam.Questions.Add(new DomainEntities.Question(exam.Id, "Q1?", "1", "2", "3", "4", 1, 1));
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var response = await Client.PostAsync($"/api/user/exams/{exam.Id}/start", null);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+    }
+
+    [Fact]
     public async Task SubmitExam_WithMismatchedAttemptId_Returns400()
     {
         var (_, userId) = await CreateTestUserAsync();

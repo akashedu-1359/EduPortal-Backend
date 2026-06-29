@@ -39,7 +39,11 @@ public class ExamStatusSchedulerService : BackgroundService
 
         // Auto-activate scheduled exams whose start time has arrived and end time has not yet passed
         var toActivate = await db.Exams
-            .Where(e => !e.IsDeleted && e.Status == ExamStatus.Draft && e.ScheduledStartAt != null && e.ScheduledStartAt <= now && (e.ScheduledEndAt == null || e.ScheduledEndAt > now))
+            .Where(e => !e.IsDeleted
+                && (e.Status == ExamStatus.Draft || e.Status == ExamStatus.Scheduled)
+                && e.ScheduledStartAt != null
+                && e.ScheduledStartAt <= now
+                && (e.ScheduledEndAt == null || e.ScheduledEndAt > now))
             .ToListAsync(ct);
 
         foreach (var exam in toActivate)

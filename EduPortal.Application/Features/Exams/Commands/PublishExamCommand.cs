@@ -17,9 +17,18 @@ public class PublishExamCommandHandler : IRequestHandler<PublishExamCommand, Res
     {
         var exam = await _exams.GetByIdAsync(request.Id, includeQuestions: true, ct: cancellationToken);
         if (exam == null) return Result.NotFound("Exam not found.");
-        if (exam.Status == ExamStatus.Active) return Result.Failure("Exam is already active.", 409);
+        if (exam.Status == ExamStatus.Active || exam.Status == ExamStatus.Scheduled)
+            return Result.Failure("Exam is already published.", 409);
         if (!exam.Questions.Any()) return Result.Failure("Exam must have at least one question before activating.", 400);
-        exam.Status = ExamStatus.Active;
+
+        var now = DateTime.UtcNow;
+        if (exam.ScheduledEndAt.HasValue && exam.ScheduledEndAt.Value <= now)
+            return Result.Failure("Cannot publish: scheduled end time has already passed.", 400);
+
+        exam.Status = exam.ScheduledStartAt.HasValue && exam.ScheduledStartAt.Value > now
+            ? ExamStatus.Scheduled
+            : ExamStatus.Active;
+
         await _exams.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
@@ -34,7 +43,8 @@ public class UnpublishExamCommandHandler : IRequestHandler<UnpublishExamCommand,
     {
         var exam = await _exams.GetByIdAsync(request.Id, ct: cancellationToken);
         if (exam == null) return Result.NotFound("Exam not found.");
-        if (exam.Status != ExamStatus.Active) return Result.Failure("Exam is not currently active.", 400);
+        if (exam.Status != ExamStatus.Active && exam.Status != ExamStatus.Scheduled)
+            return Result.Failure("Exam is not currently published.", 400);
         exam.Status = ExamStatus.Draft;
         await _exams.SaveChangesAsync(cancellationToken);
         return Result.Success();

@@ -62,9 +62,19 @@ public class ExamRepository : IExamRepository
 
     public async Task<(List<Exam> Items, int Total)> GetPagedActiveAsync(int page, int pageSize, CancellationToken ct = default)
     {
-        var query = _db.Exams.Where(e => !e.IsDeleted && e.Status == ExamStatus.Active).Include(e => e.Questions);
+        var now = DateTime.UtcNow;
+        var query = _db.Exams.Where(e =>
+            !e.IsDeleted
+            && e.Status == ExamStatus.Active
+            && (e.ScheduledStartAt == null || e.ScheduledStartAt <= now)
+            && (e.ScheduledEndAt == null || e.ScheduledEndAt > now));
         var total = await query.CountAsync(ct);
-        var items = await query.OrderByDescending(e => e.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        var items = await query
+            .Include(e => e.Questions)
+            .OrderByDescending(e => e.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
         return (items, total);
     }
 
