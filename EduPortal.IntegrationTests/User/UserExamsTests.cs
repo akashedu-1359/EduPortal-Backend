@@ -6,6 +6,7 @@ using DomainEntities = EduPortal.Domain.Entities;
 using EduPortal.Infrastructure.Persistence;
 using EduPortal.IntegrationTests.Fixtures;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EduPortal.IntegrationTests.User;
@@ -138,6 +139,66 @@ public class UserExamsTests : IntegrationTestBase
             var response = await Client.PostAsync($"/api/user/exams/{exam.Id}/start", null);
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
+    }
+
+    [Fact]
+    public async Task TimeOutExamAttempt_AfterExpiry_Returns200()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        var examId = await SeedPublishedExamAsync(adminId);
+
+        var (_, userId) = await CreateTestUserAsync();
+        AuthenticateAsUser(userId);
+
+        Guid attemptId;
+        using (var scope = CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var exam = await db.Exams.FindAsync(examId);
+            var attempt = DomainEntities.ExamAttempt.Start(userId, examId);
+            db.ExamAttempts.Add(attempt);
+            await db.SaveChangesAsync();
+            attemptId = attempt.Id;
+
+            await db.ExamAttempts
+                .Where(a => a.Id == attemptId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(a => a.StartedAt, DateTime.UtcNow.AddMinutes(-(exam!.DurationMinutes + 1))));
+        }
+
+        var response = await Client.PostAsync($"/api/user/exams/attempts/{attemptId}/timeout", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var attempt = await db.ExamAttempts.FindAsync(attemptId);
+            attempt!.Status.Should().Be(AttemptStatus.TimedOut);
+            attempt.Score.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public async Task SubmitExam_WithEmptyAnswers_Returns400()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        var examId = await SeedPublishedExamAsync(adminId);
+
+        var (_, userId) = await CreateTestUserAsync();
+        AuthenticateAsUser(userId);
+
+        var startResponse = await Client.PostAsync($"/api/user/exams/{examId}/start", null);
+        var startJson = await startResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var attemptId = startJson.GetProperty("attemptId").GetGuid();
+
+        var submitResponse = await Client.PostAsJsonAsync($"/api/user/exams/attempts/{attemptId}/submit", new
+        {
+            AttemptId = attemptId,
+            Answers = Array.Empty<object>()
+        });
+
+        submitResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

@@ -59,4 +59,13 @@ public class UserExamsController : ControllerBase
         var result = await _mediator.Send(command, ct);
         return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
     }
+
+    [HttpPost("attempts/{attemptId:guid}/timeout")]
+    public async Task<IActionResult> TimeOut(Guid attemptId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new TimeOutExamAttemptCommand(attemptId), ct);
+        return result.IsSuccess
+            ? Ok(new { success = true })
+            : StatusCode(result.StatusCode, new { error = result.Error });
+    }
 }

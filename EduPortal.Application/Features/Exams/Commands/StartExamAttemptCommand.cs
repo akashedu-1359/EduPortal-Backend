@@ -34,11 +34,19 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         var activeAttempt = await _exams.GetActiveAttemptAsync(userId, request.ExamId, cancellationToken);
         if (activeAttempt != null)
         {
-            var questions = activeAttempt.Exam.Questions.OrderBy(q => q.SortOrder)
-                .Select(q => new AttemptQuestionDto(q.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.SortOrder))
-                .ToList();
             var expiresAt = activeAttempt.StartedAt.AddMinutes(activeAttempt.Exam.DurationMinutes);
-            return Result<StartAttemptResponse>.Success(new StartAttemptResponse(activeAttempt.Id, activeAttempt.StartedAt, expiresAt, questions));
+            if (DateTime.UtcNow >= expiresAt)
+            {
+                activeAttempt.TimeOut();
+                await _exams.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                var questions = activeAttempt.Exam.Questions.OrderBy(q => q.SortOrder)
+                    .Select(q => new AttemptQuestionDto(q.Id, q.QuestionText, q.Option1, q.Option2, q.Option3, q.Option4, q.SortOrder))
+                    .ToList();
+                return Result<StartAttemptResponse>.Success(new StartAttemptResponse(activeAttempt.Id, activeAttempt.StartedAt, expiresAt, questions));
+            }
         }
 
         var attemptCount = await _exams.GetAttemptCountAsync(userId, request.ExamId, cancellationToken);
