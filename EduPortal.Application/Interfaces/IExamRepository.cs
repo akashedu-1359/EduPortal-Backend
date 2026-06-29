@@ -1,10 +1,14 @@
 using EduPortal.Domain.Entities;
+using EduPortal.Domain.Enums;
 
 namespace EduPortal.Application.Interfaces;
 
 public interface IExamRepository
 {
     Task<Exam?> GetByIdAsync(Guid id, bool includeQuestions = false, CancellationToken ct = default);
+    Task<ExamStatus?> GetExamStatusAsync(Guid examId, CancellationToken ct = default);
+    Task<int> GetQuestionCountAsync(Guid examId, CancellationToken ct = default);
+    Task AddQuestionAsync(Question question, CancellationToken ct = default);
     Task<(List<Exam> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default);
     Task<(List<Exam> Items, int Total)> GetPagedActiveAsync(int page, int pageSize, CancellationToken ct = default);
     Task<ExamAttempt?> GetAttemptAsync(Guid attemptId, CancellationToken ct = default);

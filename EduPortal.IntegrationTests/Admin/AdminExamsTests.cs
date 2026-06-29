@@ -130,6 +130,39 @@ public class AdminExamsTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task AddQuestion_ToDraftExam_Returns201()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        AuthenticateAsAdmin(adminId);
+
+        using (var scope = CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var exam = new DomainEntities.Exam("Draft Exam", "Desc", 30, 60m, adminId)
+            {
+                MaxAttempts = 3,
+                Status = ExamStatus.Draft
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+
+            var response = await Client.PostAsJsonAsync("/api/admin/questions", new
+            {
+                ExamId = exam.Id,
+                QuestionText = "What is 2+2?",
+                Option1 = "3",
+                Option2 = "4",
+                Option3 = "5",
+                Option4 = "6",
+                CorrectOptionIndex = 1,
+                SortOrder = 0
+            });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+    }
+
+    [Fact]
     public async Task DeleteExam_WithAdmin_ReturnsSuccess()
     {
         var (_, adminId) = await CreateTestAdminAsync();

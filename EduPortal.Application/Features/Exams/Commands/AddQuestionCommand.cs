@@ -19,16 +19,20 @@ public class AddQuestionCommandHandler : IRequestHandler<AddQuestionCommand, Res
 
     public async Task<Result<Guid>> Handle(AddQuestionCommand request, CancellationToken cancellationToken)
     {
-        var exam = await _exams.GetByIdAsync(request.ExamId, includeQuestions: true, ct: cancellationToken);
-        if (exam == null) return Result<Guid>.NotFound("Exam not found.");
-        if (exam.Status == ExamStatus.Active) return Result<Guid>.Failure("Cannot add questions to an active exam.", 400);
+        var status = await _exams.GetExamStatusAsync(request.ExamId, cancellationToken);
+        if (status == null) return Result<Guid>.NotFound("Exam not found.");
+        if (status == ExamStatus.Active) return Result<Guid>.Failure("Cannot add questions to an active exam.", 400);
+
+        var sortOrder = request.SortOrder > 0
+            ? request.SortOrder
+            : await _exams.GetQuestionCountAsync(request.ExamId, cancellationToken) + 1;
 
         var question = new Question(
             request.ExamId, request.QuestionText,
             request.Option1, request.Option2, request.Option3, request.Option4,
-            request.CorrectOptionIndex, request.SortOrder);
+            request.CorrectOptionIndex, sortOrder);
 
-        exam.Questions.Add(question);
+        await _exams.AddQuestionAsync(question, cancellationToken);
         await _exams.SaveChangesAsync(cancellationToken);
         return Result<Guid>.Created(question.Id);
     }

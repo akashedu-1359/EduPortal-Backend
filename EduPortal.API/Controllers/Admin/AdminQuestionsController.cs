@@ -18,21 +18,24 @@ public class AdminQuestionsController : ControllerBase
     public async Task<IActionResult> Add([FromBody] AddQuestionCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.IsSuccess ? StatusCode(201, new { id = result.Value }) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? StatusCode(201, new { success = true, data = new { id = result.Value } })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateQuestionCommand command, CancellationToken ct)
     {
-        if (id != command.Id) return BadRequest(new { error = "ID mismatch." });
+        if (id != command.Id) return BadRequest(new { success = false, error = "ID mismatch." });
         var result = await _mediator.Send(command, ct);
-        return result.IsSuccess ? NoContent() : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new DeleteQuestionCommand(id), ct);
-        return result.IsSuccess ? NoContent() : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess ? Ok(new { success = true })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 }

@@ -18,6 +18,21 @@ public class ExamRepository : IExamRepository
         return query.FirstOrDefaultAsync(ct);
     }
 
+    public async Task<ExamStatus?> GetExamStatusAsync(Guid examId, CancellationToken ct = default)
+    {
+        var exam = await _db.Exams.AsNoTracking()
+            .Where(e => e.Id == examId && !e.IsDeleted)
+            .Select(e => new { e.Status })
+            .FirstOrDefaultAsync(ct);
+        return exam?.Status;
+    }
+
+    public Task<int> GetQuestionCountAsync(Guid examId, CancellationToken ct = default) =>
+        _db.Questions.CountAsync(q => q.ExamId == examId, ct);
+
+    public async Task AddQuestionAsync(Question question, CancellationToken ct = default) =>
+        await _db.Questions.AddAsync(question, ct);
+
     public async Task<(List<Exam> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
     {
         var query = _db.Exams.Where(e => !e.IsDeleted).Include(e => e.Questions);
