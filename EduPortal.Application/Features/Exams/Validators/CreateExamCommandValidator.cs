@@ -12,14 +12,17 @@ public class CreateExamCommandValidator : AbstractValidator<CreateExamCommand>
         RuleFor(x => x.DurationMinutes).GreaterThan(0);
         RuleFor(x => x.PassingPercentage).InclusiveBetween(0, 100);
         RuleFor(x => x.MaxAttempts).GreaterThanOrEqualTo(0);
-        RuleForEach(x => x.Questions).ChildRules(q =>
+        When(x => x.Questions is { Count: > 0 }, () =>
         {
-            q.RuleFor(x => x.QuestionText).NotEmpty().MinimumLength(3);
-            q.RuleFor(x => x.Option1).NotEmpty();
-            q.RuleFor(x => x.Option2).NotEmpty();
-            q.RuleFor(x => x.Option3).NotEmpty();
-            q.RuleFor(x => x.Option4).NotEmpty();
-            q.RuleFor(x => x.CorrectOptionIndex).InclusiveBetween(0, 3);
+            RuleForEach(x => x.Questions).ChildRules(q =>
+            {
+                q.RuleFor(x => x.QuestionText).NotEmpty().MinimumLength(3);
+                q.RuleFor(x => x.Option1).NotEmpty();
+                q.RuleFor(x => x.Option2).NotEmpty();
+                q.RuleFor(x => x.Option3).NotEmpty();
+                q.RuleFor(x => x.Option4).NotEmpty();
+                q.RuleFor(x => x.CorrectOptionIndex).InclusiveBetween(0, 3);
+            });
         });
     }
 }

@@ -15,7 +15,7 @@ public record CreateExamCommand(
     int MaxAttempts,
     DateTime? ScheduledStartAt,
     DateTime? ScheduledEndAt,
-    List<QuestionDto> Questions) : IRequest<Result<Guid>>;
+    List<QuestionDto>? Questions = null) : IRequest<Result<Guid>>;
 
 public class CreateExamCommandHandler : IRequestHandler<CreateExamCommand, Result<Guid>>
 {
