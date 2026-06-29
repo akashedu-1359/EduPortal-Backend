@@ -38,6 +38,18 @@ public class AdminExamsController : ControllerBase
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
+    [HttpPost("{examId:guid}/questions/bulk")]
+    public async Task<IActionResult> BulkAddQuestions(
+        Guid examId,
+        [FromBody] BulkAddQuestionsRequest body,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new BulkAddQuestionsCommand(examId, body.Questions), ct);
+        return result.IsSuccess
+            ? StatusCode(201, new { success = true, data = result.Value })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateExamCommand command, CancellationToken ct)
     {
@@ -79,3 +91,5 @@ public class AdminExamsController : ControllerBase
             : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 }
+
+public record BulkAddQuestionsRequest(List<BulkQuestionItem> Questions);
