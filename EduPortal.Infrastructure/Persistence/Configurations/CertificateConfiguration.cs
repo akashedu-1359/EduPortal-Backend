@@ -10,6 +10,7 @@ public class CertificateConfiguration : IEntityTypeConfiguration<Certificate>
     {
         builder.HasKey(c => c.Id);
         builder.Property(c => c.IssuedAt).HasColumnType("timestamptz");
+        builder.Property(c => c.EmailSentAt).HasColumnType("timestamptz");
         builder.HasIndex(c => c.UserId);
         builder.HasIndex(c => c.ExamAttemptId);
         builder.HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId);

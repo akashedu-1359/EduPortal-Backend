@@ -29,5 +29,6 @@ public interface IExamRepository
     Task<Certificate?> GetCertificateAsync(Guid id, CancellationToken ct = default);
     Task<List<Certificate>> GetCertificatesByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<(List<Certificate> Items, int Total)> GetPagedCertificatesAsync(int page, int pageSize, string? search = null, CancellationToken ct = default);
+    Task<List<Certificate>> GetCertificatesPendingEmailAsync(CancellationToken ct = default);
     Task<List<ExamAttempt>> GetAttemptsByUserIdAsync(Guid userId, CancellationToken ct = default);
 }

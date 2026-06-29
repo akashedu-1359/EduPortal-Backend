@@ -1,6 +1,8 @@
 using EduPortal.Application.Common;
+using EduPortal.Application.Features.Certificates;
 using EduPortal.Application.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace EduPortal.Application.Features.Cms.Commands;
 
@@ -69,17 +71,42 @@ public record ToggleFeatureFlagCommand(string Key, bool IsEnabled) : IRequest<Re
 
 public class ToggleFeatureFlagCommandHandler : IRequestHandler<ToggleFeatureFlagCommand, Result>
 {
-    private readonly ICmsRepository _cms; private readonly ICacheService _cache;
-    public ToggleFeatureFlagCommandHandler(ICmsRepository cms, ICacheService cache) { _cms = cms; _cache = cache; }
+    private readonly ICmsRepository _cms;
+    private readonly ICacheService _cache;
+    private readonly IMediator _mediator;
+    private readonly ILogger<ToggleFeatureFlagCommandHandler> _logger;
+
+    public ToggleFeatureFlagCommandHandler(
+        ICmsRepository cms,
+        ICacheService cache,
+        IMediator mediator,
+        ILogger<ToggleFeatureFlagCommandHandler> logger)
+    {
+        _cms = cms;
+        _cache = cache;
+        _mediator = mediator;
+        _logger = logger;
+    }
 
     public async Task<Result> Handle(ToggleFeatureFlagCommand request, CancellationToken cancellationToken)
     {
         var flags = await _cms.GetFeatureFlagsAsync(cancellationToken);
         var flag = flags.FirstOrDefault(f => f.Key == request.Key);
         if (flag == null) return Result.NotFound("Feature flag not found.");
-        flag.IsEnabled = request.IsEnabled; flag.UpdatedAt = DateTime.UtcNow;
+        flag.IsEnabled = request.IsEnabled;
+        flag.UpdatedAt = DateTime.UtcNow;
         await _cms.SaveChangesAsync(cancellationToken);
         await _cache.DeleteAsync("cms:features", cancellationToken);
+
+        if (request.Key == FeatureFlagKeys.EnableCertificates && request.IsEnabled)
+        {
+            var result = await _mediator.Send(new SendPendingCertificateEmailsCommand(), cancellationToken);
+            _logger.LogInformation(
+                "Certificate flag enabled — sent {Sent} pending emails ({Failed} failed).",
+                result.Sent,
+                result.Failed);
+        }
+
         return Result.Success();
     }
 }

@@ -26,6 +26,7 @@ public interface ICmsRepository
     Task<CmsSetting?> GetSettingByKeyAsync(string key, CancellationToken ct = default);
 
     Task<List<CmsFeatureFlag>> GetFeatureFlagsAsync(CancellationToken ct = default);
+    Task<bool> IsFeatureEnabledAsync(string key, CancellationToken ct = default);
 
     Task<List<CmsPromoBanner>> GetPromoBannersAsync(CancellationToken ct = default);
     Task<List<CmsPromoBanner>> GetActivePromoBannersAsync(CancellationToken ct = default);

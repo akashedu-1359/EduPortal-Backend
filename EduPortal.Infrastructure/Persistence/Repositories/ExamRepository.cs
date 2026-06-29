@@ -160,6 +160,13 @@ public class ExamRepository : IExamRepository
         return (items, total);
     }
 
+    public Task<List<Certificate>> GetCertificatesPendingEmailAsync(CancellationToken ct) =>
+        _db.Certificates
+            .Include(c => c.User)
+            .Where(c => c.EmailSentAt == null)
+            .OrderBy(c => c.IssuedAt)
+            .ToListAsync(ct);
+
     public Task<List<Certificate>> GetCertificatesByUserIdAsync(Guid userId, CancellationToken ct) =>
         _db.Certificates.Where(c => c.UserId == userId).OrderByDescending(c => c.IssuedAt).ToListAsync(ct);
 

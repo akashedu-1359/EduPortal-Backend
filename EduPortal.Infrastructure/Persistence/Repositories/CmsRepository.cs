@@ -32,6 +32,13 @@ public class CmsRepository : ICmsRepository
 
     public Task<List<CmsFeatureFlag>> GetFeatureFlagsAsync(CancellationToken ct) => _db.CmsFeatureFlags.ToListAsync(ct);
 
+    public async Task<bool> IsFeatureEnabledAsync(string key, CancellationToken ct)
+    {
+        var flag = await _db.CmsFeatureFlags.AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Key == key, ct);
+        return flag?.IsEnabled ?? false;
+    }
+
     public Task<List<CmsPromoBanner>> GetPromoBannersAsync(CancellationToken ct) => _db.CmsPromoBanners.OrderBy(p => p.SortOrder).ToListAsync(ct);
     public Task<List<CmsPromoBanner>> GetActivePromoBannersAsync(CancellationToken ct)
     {

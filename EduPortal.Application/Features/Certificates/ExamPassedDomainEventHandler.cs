@@ -1,3 +1,4 @@
+using EduPortal.Application.Common;
 using EduPortal.Application.Interfaces;
 using EduPortal.Domain.Entities;
 using EduPortal.Domain.Events;
@@ -10,24 +11,27 @@ public class ExamPassedDomainEventHandler : INotificationHandler<ExamPassedDomai
 {
     private readonly IExamRepository _exams;
     private readonly IUserRepository _users;
+    private readonly ICmsRepository _cms;
     private readonly IPdfGeneratorService _pdfGenerator;
     private readonly IStorageService _storage;
-    private readonly IEmailService _email;
+    private readonly IMediator _mediator;
     private readonly ILogger<ExamPassedDomainEventHandler> _logger;
 
     public ExamPassedDomainEventHandler(
         IExamRepository exams,
         IUserRepository users,
+        ICmsRepository cms,
         IPdfGeneratorService pdfGenerator,
         IStorageService storage,
-        IEmailService email,
+        IMediator mediator,
         ILogger<ExamPassedDomainEventHandler> logger)
     {
         _exams = exams;
         _users = users;
+        _cms = cms;
         _pdfGenerator = pdfGenerator;
         _storage = storage;
-        _email = email;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -43,7 +47,8 @@ public class ExamPassedDomainEventHandler : INotificationHandler<ExamPassedDomai
             if (exam == null || user == null) return;
 
             var issuedAt = attempt.CompletedAt ?? DateTime.UtcNow;
-            var pdfBytes = await _pdfGenerator.GenerateCertificateAsync(user.FullName, exam.Title, notification.Score, issuedAt, cancellationToken);
+            var pdfBytes = await _pdfGenerator.GenerateCertificateAsync(
+                user.FullName, exam.Title, notification.Score, issuedAt, cancellationToken);
             var storageKey = $"certificates/{notification.UserId}/{notification.AttemptId}.pdf";
 
             using var stream = new MemoryStream(pdfBytes);
@@ -54,10 +59,26 @@ public class ExamPassedDomainEventHandler : INotificationHandler<ExamPassedDomai
             attempt.CertificateId = certificate.Id;
             await _exams.SaveChangesAsync(cancellationToken);
 
-            var certUrl = await _storage.GetReadUrlAsync(storageKey, 3600, cancellationToken);
-            await _email.SendCertificateEmailAsync(user.Email, user.FullName, certUrl, cancellationToken);
+            _logger.LogInformation(
+                "Certificate issued for user {UserId}, attempt {AttemptId}.",
+                notification.UserId,
+                notification.AttemptId);
 
-            _logger.LogInformation("Certificate issued for user {UserId}, attempt {AttemptId}.", notification.UserId, notification.AttemptId);
+            var certificatesEnabled = await _cms.IsFeatureEnabledAsync(
+                FeatureFlagKeys.EnableCertificates,
+                cancellationToken);
+
+            if (certificatesEnabled)
+            {
+                await _mediator.Send(new SendCertificateEmailCommand(certificate.Id), cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Certificate email deferred for {CertificateId} — {Flag} is disabled.",
+                    certificate.Id,
+                    FeatureFlagKeys.EnableCertificates);
+            }
         }
         catch (Exception ex)
         {

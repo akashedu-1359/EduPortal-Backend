@@ -8,6 +8,7 @@ public class Certificate : BaseEntity
     public Guid ExamAttemptId { get; private set; }
     public string StorageKey { get; private set; } = default!;
     public DateTime IssuedAt { get; private set; }
+    public DateTime? EmailSentAt { get; private set; }
 
     public User User { get; private set; } = default!;
     public ExamAttempt ExamAttempt { get; private set; } = default!;
@@ -24,4 +25,6 @@ public class Certificate : BaseEntity
             IssuedAt = DateTime.UtcNow
         };
     }
+
+    public void MarkEmailSent() => EmailSentAt = DateTime.UtcNow;
 }
