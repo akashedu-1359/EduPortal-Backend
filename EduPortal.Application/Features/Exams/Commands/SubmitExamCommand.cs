@@ -28,10 +28,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, Resul
         if (attempt.UserId != userId) return Result<SubmitExamResponse>.Unauthorized();
         if (attempt.Status != AttemptStatus.InProgress) return Result<SubmitExamResponse>.Failure("Attempt is already completed.", 400);
 
-        var exam = await _exams.GetByIdAsync(attempt.ExamId, includeQuestions: true, ct: cancellationToken);
-        if (exam == null) return Result<SubmitExamResponse>.NotFound("Exam not found.");
+        var scoringInfo = await _exams.GetExamScoringInfoAsync(attempt.ExamId, cancellationToken);
+        if (scoringInfo == null) return Result<SubmitExamResponse>.NotFound("Exam not found.");
 
-        var deadline = attempt.StartedAt.AddMinutes(exam.DurationMinutes).AddSeconds(30);
+        var deadline = attempt.StartedAt.AddMinutes(scoringInfo.DurationMinutes).AddSeconds(30);
         if (DateTime.UtcNow > deadline)
         {
             attempt.TimeOut();
@@ -39,31 +39,36 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, Resul
             return Result<SubmitExamResponse>.Failure("Exam time has expired.", 400);
         }
 
-        var questionMap = exam.Questions.ToDictionary(q => q.Id);
+        var questionMap = scoringInfo.Questions.ToDictionary(q => q.Id);
         int correct = 0;
 
         foreach (var submission in request.Answers)
         {
             if (!questionMap.TryGetValue(submission.QuestionId, out var question)) continue;
             var answer = AttemptAnswer.Create(attempt.Id, question.Id, submission.SelectedOptionIndex, question.CorrectOptionIndex);
-            attempt.Answers.Add(answer);
+            await _exams.AddAttemptAnswerAsync(answer, cancellationToken);
             if (answer.IsCorrect) correct++;
         }
 
-        var score = exam.Questions.Any()
-            ? Math.Round((decimal)correct / exam.Questions.Count * 100, 2)
+        var totalQuestions = scoringInfo.Questions.Count;
+        var score = totalQuestions > 0
+            ? Math.Round((decimal)correct / totalQuestions * 100, 2)
             : 0m;
 
-        attempt.Complete(score, exam.PassingPercentage);
-
-        // Publish domain events
-        foreach (var evt in attempt.DomainEvents)
-            if (evt is MediatR.INotification notification)
-                await _publisher.Publish(notification, cancellationToken);
-        attempt.ClearDomainEvents();
+        attempt.Complete(score, scoringInfo.PassingPercentage);
 
         await _exams.SaveChangesAsync(cancellationToken);
 
-        return Result<SubmitExamResponse>.Success(new SubmitExamResponse(score, attempt.IsPassed ?? false, exam.PassingPercentage, exam.Questions.Count, correct));
+        foreach (var evt in attempt.DomainEvents)
+            if (evt is INotification notification)
+                await _publisher.Publish(notification, cancellationToken);
+        attempt.ClearDomainEvents();
+
+        return Result<SubmitExamResponse>.Success(new SubmitExamResponse(
+            score,
+            attempt.IsPassed ?? false,
+            scoringInfo.PassingPercentage,
+            totalQuestions,
+            correct));
     }
 }

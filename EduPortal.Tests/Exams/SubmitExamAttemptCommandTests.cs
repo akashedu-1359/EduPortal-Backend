@@ -18,7 +18,7 @@ public class SubmitExamAttemptCommandTests
     private SubmitExamCommandHandler CreateHandler() =>
         new(_examRepo.Object, _currentUser.Object, _publisher.Object);
 
-    private (Exam Exam, ExamAttempt Attempt, Guid UserId) SetupExamWithQuestions(int questionCount = 3, decimal passingPercentage = 70m)
+    private (ExamAttempt Attempt, Guid UserId, ExamScoringInfo ScoringInfo) SetupExamWithQuestions(int questionCount = 3, decimal passingPercentage = 70m)
     {
         var userId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
@@ -28,19 +28,24 @@ public class SubmitExamAttemptCommandTests
             exam.Questions.Add(new Question(exam.Id, $"Q{i + 1}?", "A", "B", "C", "D", 1, i));
         }
 
+        var scoringInfo = new ExamScoringInfo(
+            exam.DurationMinutes,
+            exam.PassingPercentage,
+            exam.Questions.Select(q => new QuestionScoringInfo(q.Id, q.CorrectOptionIndex)).ToList());
+
         var attempt = ExamAttempt.Start(userId, exam.Id);
         _currentUser.Setup(u => u.UserId).Returns(userId);
         _examRepo.Setup(r => r.GetAttemptAsync(attempt.Id, It.IsAny<CancellationToken>())).ReturnsAsync(attempt);
-        _examRepo.Setup(r => r.GetByIdAsync(exam.Id, true, It.IsAny<CancellationToken>())).ReturnsAsync(exam);
+        _examRepo.Setup(r => r.GetExamScoringInfoAsync(exam.Id, It.IsAny<CancellationToken>())).ReturnsAsync(scoringInfo);
 
-        return (exam, attempt, userId);
+        return (attempt, userId, scoringInfo);
     }
 
     [Fact]
     public async Task Handle_AllCorrectAnswers_ReturnsPassWithFullScore()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(3, 70m);
-        var answers = exam.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(3, 70m);
+        var answers = scoringInfo.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
 
         var result = await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, answers), default);
 
@@ -54,8 +59,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_AllWrongAnswers_ReturnsFailWithZeroScore()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(3, 70m);
-        var answers = exam.Questions.Select(q => new AnswerSubmission(q.Id, 3)).ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(3, 70m);
+        var answers = scoringInfo.Questions.Select(q => new AnswerSubmission(q.Id, 3)).ToList();
 
         var result = await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, answers), default);
 
@@ -68,8 +73,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_PartialCorrect_CalculatesScoreCorrectly()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(4, 50m);
-        var questions = exam.Questions.ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(4, 50m);
+        var questions = scoringInfo.Questions.ToList();
         var answers = new List<AnswerSubmission>
         {
             new(questions[0].Id, 1),
@@ -101,7 +106,7 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_WrongUser_Returns401()
     {
-        var (_, attempt, _) = SetupExamWithQuestions();
+        var (attempt, _, _) = SetupExamWithQuestions();
         _currentUser.Setup(u => u.UserId).Returns(Guid.NewGuid());
 
         var result = await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, new List<AnswerSubmission>()), default);
@@ -113,7 +118,7 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_AlreadyCompleted_Returns400()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions();
+        var (attempt, _, _) = SetupExamWithQuestions();
         attempt.Complete(80m, 70m);
         attempt.ClearDomainEvents();
 
@@ -126,8 +131,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_PassingScore_PublishesDomainEvent()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(2, 50m);
-        var answers = exam.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(2, 50m);
+        var answers = scoringInfo.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
 
         await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, answers), default);
 
@@ -137,8 +142,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_FailingScore_DoesNotPublishDomainEvent()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(3, 70m);
-        var answers = exam.Questions.Select(q => new AnswerSubmission(q.Id, 3)).ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(3, 70m);
+        var answers = scoringInfo.Questions.Select(q => new AnswerSubmission(q.Id, 3)).ToList();
 
         await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, answers), default);
 
@@ -148,8 +153,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_NullSelectedOption_TreatedAsIncorrect()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(2, 50m);
-        var questions = exam.Questions.ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(2, 50m);
+        var questions = scoringInfo.Questions.ToList();
         var answers = new List<AnswerSubmission>
         {
             new(questions[0].Id, null),
@@ -166,8 +171,8 @@ public class SubmitExamAttemptCommandTests
     [Fact]
     public async Task Handle_SavesChangesAfterSubmission()
     {
-        var (exam, attempt, _) = SetupExamWithQuestions(1, 50m);
-        var answers = exam.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
+        var (attempt, _, scoringInfo) = SetupExamWithQuestions(1, 50m);
+        var answers = scoringInfo.Questions.Select(q => new AnswerSubmission(q.Id, 1)).ToList();
 
         await CreateHandler().Handle(new SubmitExamCommand(attempt.Id, answers), default);
 

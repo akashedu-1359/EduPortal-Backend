@@ -6,6 +6,7 @@ namespace EduPortal.Application.Interfaces;
 public interface IExamRepository
 {
     Task<Exam?> GetByIdAsync(Guid id, bool includeQuestions = false, CancellationToken ct = default);
+    Task<ExamScoringInfo?> GetExamScoringInfoAsync(Guid examId, CancellationToken ct = default);
     Task<ExamStatus?> GetExamStatusAsync(Guid examId, CancellationToken ct = default);
     Task<int> GetQuestionCountAsync(Guid examId, CancellationToken ct = default);
     Task AddQuestionAsync(Question question, CancellationToken ct = default);
@@ -20,6 +21,7 @@ public interface IExamRepository
     void RemoveQuestion(Question question);
     Task AddAsync(Exam exam, CancellationToken ct = default);
     Task AddAttemptAsync(ExamAttempt attempt, CancellationToken ct = default);
+    Task AddAttemptAnswerAsync(AttemptAnswer answer, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 
     // Certificate methods

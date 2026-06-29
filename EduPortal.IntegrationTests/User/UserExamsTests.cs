@@ -90,6 +90,31 @@ public class UserExamsTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SubmitExam_AfterStart_Returns200()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        var examId = await SeedPublishedExamAsync(adminId);
+
+        var (_, userId) = await CreateTestUserAsync();
+        AuthenticateAsUser(userId);
+
+        var startResponse = await Client.PostAsync($"/api/user/exams/{examId}/start", null);
+        startResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var startJson = await startResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var attemptId = startJson.GetProperty("attemptId").GetGuid();
+        var questionId = startJson.GetProperty("questions")[0].GetProperty("id").GetGuid();
+
+        var submitResponse = await Client.PostAsJsonAsync($"/api/user/exams/attempts/{attemptId}/submit", new
+        {
+            AttemptId = attemptId,
+            Answers = new[] { new { QuestionId = questionId, SelectedOptionIndex = 1 } }
+        });
+
+        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task SubmitExam_WithMismatchedAttemptId_Returns400()
     {
         var (_, userId) = await CreateTestUserAsync();

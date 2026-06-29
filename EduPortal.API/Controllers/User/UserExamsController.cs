@@ -19,14 +19,16 @@ public class UserExamsController : ControllerBase
     public async Task<IActionResult> GetPublished([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new GetExamsQuery(page, pageSize, ActiveOnly: true), ct);
-        return Ok(result.Value);
+        return Ok(new { success = true, data = result.Value });
     }
 
     [HttpGet("{examId:guid}")]
     public async Task<IActionResult> GetDetail(Guid examId, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetExamByIdForUserQuery(examId), ct);
-        return result.IsSuccess ? Ok(result.Value) : StatusCode(result.StatusCode, new { error = result.Error });
+        return result.IsSuccess
+            ? Ok(new { success = true, data = result.Value })
+            : StatusCode(result.StatusCode, new { success = false, error = result.Error });
     }
 
     [HttpGet("attempts")]

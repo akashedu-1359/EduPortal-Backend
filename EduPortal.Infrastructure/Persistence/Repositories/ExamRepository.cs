@@ -18,6 +18,25 @@ public class ExamRepository : IExamRepository
         return query.FirstOrDefaultAsync(ct);
     }
 
+    public async Task<ExamScoringInfo?> GetExamScoringInfoAsync(Guid examId, CancellationToken ct = default)
+    {
+        var exam = await _db.Exams.AsNoTracking()
+            .Where(e => e.Id == examId && !e.IsDeleted)
+            .Select(e => new
+            {
+                e.DurationMinutes,
+                e.PassingPercentage,
+                Questions = e.Questions
+                    .Select(q => new QuestionScoringInfo(q.Id, q.CorrectOptionIndex))
+                    .ToList()
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (exam == null) return null;
+
+        return new ExamScoringInfo(exam.DurationMinutes, exam.PassingPercentage, exam.Questions);
+    }
+
     public async Task<ExamStatus?> GetExamStatusAsync(Guid examId, CancellationToken ct = default)
     {
         var exam = await _db.Exams.AsNoTracking()
@@ -93,6 +112,9 @@ public class ExamRepository : IExamRepository
 
     public async Task AddAttemptAsync(ExamAttempt attempt, CancellationToken ct) =>
         await _db.ExamAttempts.AddAsync(attempt, ct);
+
+    public async Task AddAttemptAnswerAsync(AttemptAnswer answer, CancellationToken ct) =>
+        await _db.AttemptAnswers.AddAsync(answer, ct);
 
     public async Task AddCertificateAsync(Certificate cert, CancellationToken ct) =>
         await _db.Certificates.AddAsync(cert, ct);
