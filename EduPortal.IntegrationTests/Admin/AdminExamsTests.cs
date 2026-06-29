@@ -163,6 +163,17 @@ public class AdminExamsTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetExamAttempts_WithAdmin_Returns200()
+    {
+        var (_, adminId) = await CreateTestAdminAsync();
+        AuthenticateAsAdmin(adminId);
+
+        var response = await Client.GetAsync("/api/admin/exam-attempts?page=1&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task DeleteExam_WithAdmin_ReturnsSuccess()
     {
         var (_, adminId) = await CreateTestAdminAsync();

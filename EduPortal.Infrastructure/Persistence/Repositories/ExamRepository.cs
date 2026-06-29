@@ -63,6 +63,22 @@ public class ExamRepository : IExamRepository
         return (items, total);
     }
 
+    public async Task<(List<ExamAttempt> Items, int Total)> GetPagedAttemptsAsync(
+        int page, int pageSize, Guid? examId = null, CancellationToken ct = default)
+    {
+        var query = _db.ExamAttempts.Include(a => a.Exam).AsQueryable();
+        if (examId.HasValue)
+            query = query.Where(a => a.ExamId == examId.Value);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(a => a.StartedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
+    }
+
     public Task<ExamAttempt?> GetActiveAttemptAsync(Guid userId, Guid examId, CancellationToken ct = default) =>
         _db.ExamAttempts.Include(a => a.Exam).ThenInclude(e => e.Questions)
             .FirstOrDefaultAsync(a => a.UserId == userId && a.ExamId == examId && a.Status == AttemptStatus.InProgress, ct);

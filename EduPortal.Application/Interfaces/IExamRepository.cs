@@ -14,6 +14,7 @@ public interface IExamRepository
     Task<ExamAttempt?> GetAttemptAsync(Guid attemptId, CancellationToken ct = default);
     Task<int> GetAttemptCountAsync(Guid userId, Guid examId, CancellationToken ct = default);
     Task<(List<ExamAttempt> Items, int Total)> GetPagedAttemptsByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
+    Task<(List<ExamAttempt> Items, int Total)> GetPagedAttemptsAsync(int page, int pageSize, Guid? examId = null, CancellationToken ct = default);
     Task<ExamAttempt?> GetActiveAttemptAsync(Guid userId, Guid examId, CancellationToken ct = default);
     Task<Question?> GetQuestionByIdAsync(Guid id, CancellationToken ct = default);
     void RemoveQuestion(Question question);
